@@ -1,10 +1,13 @@
 #!/usr/bin/env python3
+
 import os
 import re
-import getpass
 import sys
+import platform
 import readline
 readline.parse_and_bind("tab: complete")
+
+from cow import cow
 
 # up = '\x1b[A'
 # down = '\x1b[B'
@@ -19,8 +22,15 @@ blue = '\033[34m'
 purple = '\033[35m'
 cyan = '\033[36m'
 
+def cowsay(string):
+    cow(string)
+
+
 def cd(path):
-    os.chdir(path)
+    if os.path.isdir(path):
+        os.chdir(path)
+    else:
+        print(f"{red}Not a valid directory path!{reset}")
 
 
 def pwd():
@@ -28,7 +38,7 @@ def pwd():
 
 
 def whoami():
-    print(getpass.getuser())
+    print(os.getenv("USER"))
 
 
 def ls():
@@ -53,15 +63,20 @@ def touch(filename):
     if not os.path.exists(filename):
         open(filename, 'a').close()
     else:
-        print("file already exists")
+        print(f"{red}file already exists{reset}")
 
 
 def rm(filename):
     if os.path.exists(filename):
         os.remove(filename)
     else:
-        print("Invalid path")
+        print(f"{red}Not a valid file path!{reset}")
 
+def cat(filename):
+    if os.path.exists(filename):
+        with open(filename) as handle:
+            for line in handle:
+                print(line.strip())
 
 # This will make available = ['cd', 'path', ... with all functions above next line]
 available = []
@@ -73,7 +88,7 @@ for key, value in local_locals:
 def runShell():
     cwd = os.getcwd()
     dirname = os.path.split(cwd)[-1]
-    user = getpass.getuser()
+    user = os.getenv('USER')
     PS1 = f"{cyan}{user}{reset} {green}{dirname}{reset} {purple}${reset} "
 
     # func_cleanup = re.compile(f"({'|'.join(available)})")
@@ -94,9 +109,9 @@ def runShell():
             else:
                 splitted.insert(1,"('")
                 splitted.append("')")
-                command = ''.join(splitted)
+                command = ''.join(splitted[:2])+' '.join(splitted[2:-1])+splitted[-1]
                 print(command)
-        elif eval(command) is None:
+        elif exec(command) is None:
             command_type = 1
     except:
         command_type = 3
@@ -105,9 +120,9 @@ def runShell():
     if command == 'exit' or command == 'quit':
         raise KeyboardInterrupt
     elif command_type == 3:
-        print(f"Invalid command {user}!")
+        print(f"{red}Invalid command {user}!{reset}")
     else:
-        eval(command)
+        exec(command)
 
 try:
     while True:
