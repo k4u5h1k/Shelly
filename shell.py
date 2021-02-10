@@ -4,10 +4,18 @@ import os
 import re
 import sys
 import platform
+import signal
 import readline
+import shutil
+import socket
+import time
+from datetime import datetime
 readline.parse_and_bind("tab: complete")
 
 from cow import cow
+
+script_loc = os.path.dirname(os.path.realpath(__file__))
+histfile = open(os.path.join(script_loc,'.pysh_history'),'a+')
 
 # up = '\x1b[A'
 # down = '\x1b[B'
@@ -72,11 +80,55 @@ def rm(filename):
     else:
         print(f"{red}Not a valid file path!{reset}")
 
+def mkdir(path):
+    if not os.path.isdir(path):
+        os.mkdir(path)
+    else:
+        print(f"{red}Not a valid/free directory path!{reset}")
+
 def cat(filename):
     if os.path.exists(filename):
         with open(filename) as handle:
             for line in handle:
                 print(line.strip())
+    else:
+        print(f"{red}File does not exist!{reset}")
+
+def history():
+    histfile.seek(0)
+    lines = histfile.readlines()
+    for counter,command in enumerate(lines):
+        print(f"{(str(counter)+'.').ljust(3)} {command.rstrip()}")
+
+def kill(pid):
+    os.kill(pid, signal.SIGSTOP)
+
+def df():
+    st = os.statvfs("/")
+    free = st.f_bavail * st.f_frsize
+    total = st.f_blocks * st.f_frsize
+    used = (st.f_blocks - st.f_bfree) * st.f_frsize
+
+    print("Total: %d GiB" % (total // (2**30)))
+    print("Used: %d GiB" % (used // (2**30)))
+    print("Free: %d GiB" % (free // (2**30)))
+
+def echo(toprint):
+    print(toprint)
+
+def sleep(secs):
+    time.sleep(secs)
+
+def hostname():
+    print(socket.gethostname())
+
+def date():
+    print(datetime.now().strftime("%a %b %d %H:%M:%S %Y"))
+
+def duplicate(source, destination):
+    if os.path.isfile(source):
+        shutil.copy(source, destination)
+    
 
 # This will make available = ['cd', 'path', ... with all functions above next line]
 available = []
@@ -94,6 +146,7 @@ def runShell():
     # func_cleanup = re.compile(f"({'|'.join(available)})")
 
     command = input(PS1)
+    histfile.write(command+'\n')
 
     # possible_types = {1: 'Python', 2: 'Shell', 3: 'Invalid'}
 
@@ -101,16 +154,32 @@ def runShell():
     try:
         sys.stdout = None 
         splitted = command.split(" ")
-        print("splitted:", splitted)
         if splitted[0] in available:
             command_type = 2
             if len(splitted) == 1:
                 command += '()'
             else:
-                splitted.insert(1,"('")
-                splitted.append("')")
+                splitted.insert(1,"(")
+                splitted.append(")")
+                start_quote = lambda word: word.startswith("'") or word.startswith('"')
+                end_quote = lambda word: word.endswith("'") or word.endswith('"')
+                sawQuote = False
+                for i in range(2,len(splitted)-1):
+                    word = splitted[i]
+
+                    if not sawQuote and not (start_quote(word) or end_quote(word)):
+                        splitted[i]="'"+splitted[i]+"'"
+                        word = splitted[i]
+
+                    elif start_quote(word):
+                        sawQuote=True
+
+                    if end_quote(word) and i!=len(splitted)-2:
+                        splitted[i]+=","
+                        sawQuote = False
+
+                    
                 command = ''.join(splitted[:2])+' '.join(splitted[2:-1])+splitted[-1]
-                print(command)
         elif exec(command) is None:
             command_type = 1
     except:
@@ -129,7 +198,8 @@ try:
         runShell()
 
 except KeyboardInterrupt:
+    histfile.close()
     print()
     print(yellow+"Exiting cleanly"+reset)
     print()
-    exit(1)
+    sys.exit(1)
