@@ -13,7 +13,7 @@ name_tosend = f'USER {nickname} macbook server {nickname}' + '\n'
 host = ('irc.freenode.net',6667)
 
 connected = False
-print('Connecting to server please wait...')
+print('Connecting to server please wait.')
 
 # Connect.
 client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -59,32 +59,36 @@ def takeInput():
 # Output and ping/pong.
 recvfirstRun = True
 inpfirstRun = True
-while True:
-    if data != prevData:
-        prevData = data
-        if not recvfirstRun:
-            recvfirstRun = False
-            if recvThread.isAlive():
-                recvThread.join()
-        recvThread = threading.Thread(target=recvData)
-        recvThread.daemon = True
-        recvThread.start()
+try:
+    while True:
+        if data != prevData:
+            prevData = data
+            if not recvfirstRun:
+                recvfirstRun = False
+                if recvThread.isAlive():
+                    recvThread.join()
+            recvThread = threading.Thread(target=recvData)
+            recvThread.daemon = True
+            recvThread.start()
 
-    # else:
-    #     print(data)
+        # else:
+        #     print(data)
 
-    if connected and msg != prevMsg:
-        prevMsg = msg
-        if not inpfirstRun:
-            inpfirstRun = False
-            if inputThread.isAlive():
-                inputThread.join()
-        inputThread = threading.Thread(target=takeInput)
-        inputThread.daemon = True
-        inputThread.start()
+        if connected and msg != prevMsg:
+            prevMsg = msg
+            if not inpfirstRun:
+                inpfirstRun = False
+                if inputThread.isAlive():
+                    inputThread.join()
+            inputThread = threading.Thread(target=takeInput)
+            inputThread.daemon = True
+            inputThread.start()
 
 
-    if msg == 'exit':
+        if msg == 'exit':
+            raise KeyboardInterrupt
+            break
+except KeyboardInterrupt:
         recvThread.join()
         inputThread.join()
-        break
+    
