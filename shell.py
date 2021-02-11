@@ -125,10 +125,40 @@ def hostname():
 def date():
     print(datetime.now().strftime("%a %b %d %H:%M:%S %Y"))
 
-def duplicate(source, destination):
+def dup(source, destination):
     if os.path.isfile(source):
         shutil.copy(source, destination)
-    
+
+def mv(source, destination):
+    if os.path.isfile(source):
+        shutil.move(source, destination)
+
+def run(filename):
+    try:
+        with open(filename, "rb") as source_file:
+            code = compile(source_file.read(), filename, "exec")
+        exec(code, {})
+    except:
+        return
+
+def chat():
+    run(os.path.join(script_loc,'irc_client.py'))
+
+def help():
+    global available
+    max_comm_len = max(len(func) for func in available) + 5
+    print('Available Commands:')
+
+    # I want list in five columns (neat stonk)
+    counter = 0
+    for obj in available:
+        print(obj.ljust(max_comm_len),end="")
+        counter+=1
+        if counter%5==0 or counter == len(available):
+            print()
+    print(f'{yellow}+ Any python3 one-liners {reset}')
+
+# DEFINE YOUR FUNCTIONS ABOVE THIS LINE
 
 # This will make available = ['cd', 'path', ... with all functions above next line]
 available = []
@@ -197,7 +227,7 @@ try:
     while True:
         runShell()
 
-except KeyboardInterrupt:
+except (KeyboardInterrupt, EOFError, ValueError):
     histfile.close()
     print()
     print(yellow+"Exiting cleanly"+reset)

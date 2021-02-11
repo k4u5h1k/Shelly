@@ -60,6 +60,7 @@ try:
                 if inputThread.isAlive():
                     inputThread.join()
             inputThread = threading.Thread(target=takeInput)
+            inputThread.daemon = True
             inputThread.start()
 
         if data != prevData:
@@ -69,6 +70,7 @@ try:
                 if recvThread.isAlive():
                     recvThread.join()
             recvThread = threading.Thread(target=recvData)
+            recvThread.daemon = True
             recvThread.start()
 
         time.sleep(100)
@@ -85,6 +87,6 @@ try:
             resp = data.strip('PING ');
             client.send(('PONG ' + resp).encode())
 except KeyboardInterrupt:
+    stop = True
     while recvThread.isAlive():
         recvThread.join(1)
-    sys.exit()
