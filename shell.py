@@ -5,38 +5,49 @@ import re
 import sys
 import platform
 import signal
-import readline
 import shutil
 import socket
 import time
 from datetime import datetime
-readline.parse_and_bind("tab: complete")
 
 from cow import cow
 
+try:
+    import readline
+    readline.parse_and_bind("tab: complete")
+except:
+    print("readline not installed, installing manually")
+
+    if os.system.startwith('win'):
+        subprocess.check_call([sys.executable, "-m", "pip", "install", "pyreadline"])
+        import readline
+        readline.parse_and_bind("tab: complete")
+
+
 script_loc = os.path.dirname(os.path.realpath(__file__))
 histfile = open(os.path.join(script_loc,'.pysh_history'),'a+')
+
+if sys.platform.startswith('win'):
+    USER = 'USERNAME'
+
+    # This makes ansi escape codes work in cmd magically (O_O)
+    os.system('color')
+
+else:
+    USER = 'USER'
 
 # up = '\x1b[A'
 # down = '\x1b[B'
 # left = '\x1b[D'
 # right = '\x1b[C'
 
-# reset = '\033[0m'
-# red = '\033[31m'
-# green = '\033[32m'
-# yellow = '\033[33m'
-# blue = '\033[34m'
-# purple = '\033[35m'
-# cyan = '\033[36m'
-
-reset = '[0m'
-red = '[31m'
-green = '[32m'
-yellow = '[33m'
-blue = '[34m'
-purple = '[35m'
-cyan = '[36m'
+reset = '\033[0m'
+red = '\033[31m'
+green = '\033[32m'
+yellow = '\033[33m'
+blue = '\033[34m'
+purple = '\033[35m'
+cyan = '\033[36m'
 
 def cowsay(string):
     cow(string)
@@ -54,7 +65,7 @@ def pwd():
 
 
 def whoami():
-    print(os.getenv("USER"))
+    print(os.getenv(USER))
 
 
 def ls():
