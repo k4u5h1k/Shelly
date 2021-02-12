@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import readline
 import threading
 import socket
 import sys
@@ -64,26 +63,22 @@ try:
         if data != prevData:
             prevData = data
             if not recvfirstRun:
-                recvfirstRun = False
-                if recvThread.isAlive():
+                if recvThread.is_alive():
                     recvThread.join()
             recvThread = threading.Thread(target=recvData)
+            recvfirstRun = False
             recvThread.daemon = True
             recvThread.start()
-
-        # else:
-        #     print(data)
 
         if connected and msg != prevMsg:
             prevMsg = msg
             if not inpfirstRun:
-                inpfirstRun = False
-                if inputThread.isAlive():
+                if inputThread.is_alive():
                     inputThread.join()
             inputThread = threading.Thread(target=takeInput)
+            inpfirstRun = False
             inputThread.daemon = True
             inputThread.start()
-
 
         if msg == 'exit':
             raise KeyboardInterrupt

@@ -8,20 +8,22 @@ import signal
 import shutil
 import socket
 import time
+import subprocess
 from datetime import datetime
 
 from cow import cow
 
-try:
-    import readline
-    readline.parse_and_bind("tab: complete")
-except:
-    print("readline not installed, installing manually")
-
-    if os.system.startwith('win'):
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "pyreadline"])
+if not sys.platform.startswith('win'): # Chat issues in windows so disabling temporarily
+    try:
         import readline
         readline.parse_and_bind("tab: complete")
+    except:
+        print("readline not installed, installing manually")
+
+        if sys.platform.startswith('win'):
+            subprocess.check_call([sys.executable, "-m", "pip", "install", "pyreadline"])
+            import readline
+            readline.parse_and_bind("tab: complete")
 
 
 script_loc = os.path.dirname(os.path.realpath(__file__))
@@ -152,11 +154,11 @@ def mv(source, destination):
     if os.path.isfile(source):
         shutil.move(source, destination)
 
-def run(filename):
+def run(filename,**kwargs):
     try:
         with open(filename, "rb") as source_file:
             code = compile(source_file.read(), filename, "exec")
-        exec(code, {})
+        exec(code, kwargs)
     except:
         return
 
@@ -189,7 +191,7 @@ for key, value in local_locals:
 def runShell():
     cwd = os.getcwd()
     dirname = os.path.split(cwd)[-1]
-    user = os.getenv('USER')
+    user = os.getenv(USER)
     PS1 = f"{cyan}{user}{reset} {green}{dirname}{reset} {purple}${reset} "
 
     # func_cleanup = re.compile(f"({'|'.join(available)})")
