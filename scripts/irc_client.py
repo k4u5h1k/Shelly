@@ -83,6 +83,7 @@ try:
         if msg == 'exit':
             raise KeyboardInterrupt
             break
+
 except KeyboardInterrupt:
         recvThread.join()
         inputThread.join()

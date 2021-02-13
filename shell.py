@@ -9,9 +9,10 @@ import shutil
 import socket
 import time
 import subprocess
+import shlex
 from datetime import datetime
 
-from cow import cow
+from scripts.cow import cow
 
 if not sys.platform.startswith('win'): # Chat issues in windows so disabling temporarily
     try:
@@ -58,8 +59,10 @@ def cowsay(string):
 def cd(path):
     if os.path.isdir(path):
         os.chdir(path)
+    if os.path.isfile(dirname):
+        print(f"{red}That is a file not directory {user}!{reset}")
     else:
-        print(f"{red}Not a valid directory path!{reset}")
+        print(f"{red}{dirname} is not a valid directory!{reset}")
 
 
 def pwd():
@@ -70,8 +73,18 @@ def whoami():
     print(os.getenv(USER))
 
 
-def ls():
-    ls = os.listdir(os.curdir)
+def ls(dirname=None):
+
+    if dirname is None:
+        ls = os.listdir(os.curdir)
+    else:
+        if os.path.isdir(dirname):
+            ls = os.listdir(dirname)
+        elif os.path.isfile(dirname):
+            print(f"{red}That is a file not directory {user}!{reset}")
+        else:
+            print(f"{red}{dirname} is not a valid directory!{reset}")
+
     max_file_len = max(len(name) for name in ls) + 5
 
     # I want list in three columns (neat stonk)
@@ -81,11 +94,16 @@ def ls():
         counter+=1
         if counter%3==0 or counter == len(ls):
             print()
+dir = ls
 
 
 def clear():
     # Got this using clear | hexdump -C
     print("\x1b\x5b\x48\x1b\x5b\x32\x4a", end="")    
+cls = clear
+
+
+def diff(file1, file2):
 
 
 def touch(filename):
@@ -101,11 +119,13 @@ def rm(filename):
     else:
         print(f"{red}Not a valid file path!{reset}")
 
+
 def mkdir(path):
     if not os.path.isdir(path):
         os.mkdir(path)
     else:
         print(f"{red}Not a valid/free directory path!{reset}")
+
 
 def cat(filename):
     if os.path.exists(filename):
@@ -115,14 +135,17 @@ def cat(filename):
     else:
         print(f"{red}File does not exist!{reset}")
 
+
 def history():
     histfile.seek(0)
     lines = histfile.readlines()
     for counter,command in enumerate(lines):
         print(f"{(str(counter)+'.').ljust(3)} {command.rstrip()}")
 
+
 def kill(pid):
     os.kill(pid, signal.SIGSTOP)
+
 
 def df():
     st = os.statvfs("/")
@@ -134,36 +157,58 @@ def df():
     print("Used: %d GiB" % (used // (2**30)))
     print("Free: %d GiB" % (free // (2**30)))
 
-def echo(toprint):
-    print(toprint)
 
-def sleep(secs):
-    time.sleep(secs)
+def echo(toprint=None):
+    if toprint==None:
+        print('Usage: echo <string to print>')
+    else:
+        print(toprint)
+
+
+def sleep(secs=None):
+    if secs==None:
+        print('Usage: sleep <seconds>')
+    else:
+        time.sleep(secs)
+
 
 def hostname():
     print(socket.gethostname())
 
+
 def date():
     print(datetime.now().strftime("%a %b %d %H:%M:%S %Y"))
 
-def dup(source, destination):
-    if os.path.isfile(source):
+
+def cp(source=None, destination=None):
+    if source==None or destination==None:
+        print('Usage: cp <source> <destination>')
+    elif os.path.isfile(source):
         shutil.copy(source, destination)
 
+
 def mv(source, destination):
-    if os.path.isfile(source):
+    if source==None or destination==None:
+        print('Usage: mv <source> <destination>')
+    elif os.path.isfile(source):
         shutil.move(source, destination)
 
-def run(filename,**kwargs):
+
+def run(filename=None,**kwargs):
     try:
-        with open(filename, "rb") as source_file:
-            code = compile(source_file.read(), filename, "exec")
-        exec(code, kwargs)
+        if filename==None:
+            print('Usage: run <filename>')
+        else:
+            with open(filename, "rb") as source_file:
+                code = compile(source_file.read(), filename, "exec")
+            exec(code, kwargs)
     except:
         return
 
+
 def chat():
-    run(os.path.join(script_loc,'irc_client.py'))
+    run(os.path.join(script_loc,'scripts','irc_client.py'))
+
 
 def help():
     global available
@@ -178,6 +223,7 @@ def help():
         if counter%5==0 or counter == len(available):
             print()
     print(f'{yellow}+ Any python3 one-liners {reset}')
+
 
 # DEFINE YOUR FUNCTIONS ABOVE THIS LINE
 
@@ -204,7 +250,7 @@ def runShell():
     old_stdout = sys.stdout
     try:
         sys.stdout = None 
-        splitted = command.split(" ")
+        splitted = shlex.split(command)
         if splitted[0] in available:
             command_type = 2
             if len(splitted) == 1:
@@ -242,7 +288,11 @@ def runShell():
     elif command_type == 3:
         print(f"{red}Invalid command {user}!{reset}")
     else:
-        exec(command)
+        try:
+            exec(command)
+        except Exception as err:
+            print(f'{red}Invalid command {user}!{reset}')
+            print(f'{red}{err}{reset}')
 
 try:
     while True:
