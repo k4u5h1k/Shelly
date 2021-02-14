@@ -209,6 +209,33 @@ def run(filename=None,**kwargs):
 def chat():
     run(os.path.join(script_loc,'scripts','irc_client.py'))
 
+def colorswitch():
+    global userColor, dirColor, symbolColor
+    available = [ "red",
+                "green",
+                "yellow",
+                "blue",
+                "purple",
+                "cyan"]
+
+    toprint = "\n".join([ f"{red}red{reset}",
+                f"{green}green{reset}",
+                f"{yellow}yellow{reset}",
+                f"{blue}blue{reset}",
+                f"{purple}purple{reset}",
+                f"{cyan}cyan{reset}"])
+
+    print(f'Available Colors: \n{toprint}')
+    user = input('Username color: ').lower()
+    directory = input('Directory color: ').lower()
+    symbol = input('Prompt symbol color: ').lower()
+    if user in available and directory in available and symbol in available:
+        userColor = globals()[user]
+        dirColor = globals()[directory]
+        symbolColor = globals()[symbol]
+    else:
+        print(f'{red}One of more inputs were invalid!{reset}')
+    
 
 def help():
     global available
@@ -226,19 +253,24 @@ def help():
 
 
 # DEFINE YOUR FUNCTIONS ABOVE THIS LINE
+# =====================================
 
-# This will make available = ['cd', 'path', ... with all functions above next line]
+# This will make available = ['cd', 'pwd', ... with all functions above next line]
 available = []
 local_locals = list(locals().items()).copy()
 for key, value in local_locals:
     if callable(value) and value.__module__ == __name__:
         available.append(key)
 
+userColor = cyan
+dirColor = green
+symbolColor = purple
+
 def runShell():
     cwd = os.getcwd()
     dirname = os.path.split(cwd)[-1]
     user = os.getenv(USER)
-    PS1 = f"{cyan}{user}{reset} {green}{dirname}{reset} {purple}${reset} "
+    PS1 = f"{userColor}{user}{reset} {dirColor}{dirname}{reset} {symbolColor}${reset} "
 
     # func_cleanup = re.compile(f"({'|'.join(available)})")
 
