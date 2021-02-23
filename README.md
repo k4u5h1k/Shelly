@@ -15,3 +15,6 @@ clone this repo and run `python3 shell.py`.
 - sudo support
 - chmod support  
 - Autojump support
+
+# DEVELOPMENT
+To add your own commands simply define it as a function above the `DEFINE YOUR FUNCTION ABOVE THIS LINE` line.
