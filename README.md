@@ -1,5 +1,5 @@
 # Pysh
-A python shell with realtime IRC chat!
+A python REPL with realtime IRC chat!
 
 # Usage 
 clone this repo and run `python3 shell.py`.
