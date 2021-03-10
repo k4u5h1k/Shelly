@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import threading
+import random
 import socket
+import string
 import sys
 import time
 
@@ -28,6 +30,8 @@ prevData = "not same as data"
 def recvData():
     global data, connected
     data = client.recv(512).decode()
+    data = random.choice(string.ascii_letters) + data
+
     if data.startswith('PING '):
         resp = data.strip('PING ');
         client.send(('PONG ' + resp).encode())
@@ -42,7 +46,7 @@ def recvData():
         else:
             return
 
-    for line in data.split('\n'):
+    for line in data[1:].split('\n'):
         if 'PRIVMSG #kaushikschannel' in line:
             print('\n ',line[1:line.index('!')]+line.split('PRIVMSG #kaushikschannel')[1],"\nmsg : ", end="")
             # sender = line[1:line.index('!')]
@@ -52,8 +56,8 @@ msg = ""
 prevMsg = "not same as msg"
 def takeInput():
     global msg
-    msg = input("msg : ")
-    client.send(('PRIVMSG #kaushikschannel :'+msg+' \r\n').encode())
+    msg = random.choice(string.ascii_letters) + input("msg : ")
+    client.send(('PRIVMSG #kaushikschannel :'+msg[1:]+' \r\n').encode())
 
 # Output and ping/pong.
 recvfirstRun = True
