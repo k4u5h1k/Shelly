@@ -10,6 +10,7 @@ clone this repo and run `python3 shell.py`.
 ![Screenshot 2021-02-11 at 12 06 26 PM](https://user-images.githubusercontent.com/59250093/107726269-68ca7300-6d0e-11eb-8c1d-d20beafb132d.png)
 
 # TODO
+- No dependancy text editor
 - Pipe support
 - Redirect operator implementation
 - sudo support
