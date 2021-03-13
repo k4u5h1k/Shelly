@@ -12,7 +12,7 @@ elif sys.platform in ("win32", "cygwin"):
     import msvcrt
 
     from . import key
-    from readchar.readchar_windows import readchar
+    from .readchar_windows import readchar
 else:
     raise NotImplementedError("The platform %s is not supported yet" % sys.platform)
 
