@@ -60,7 +60,6 @@ def string_processing(args):
             string_processing("".join(new_lines))
 
 def cow(args):
-
     try:
 
         string_processing(args)
