@@ -1,5 +1,5 @@
 # Shelly
-A no external dependancy bash-like python REPL with a realtime IRC chat and custom text editor.
+A no external dependancy bash-like python REPL with realtime IRC chat and custom text editor.
 
 # Usage 
 clone this repo and run `python3 shell.py`.
@@ -25,6 +25,7 @@ clone this repo and run `python3 shell.py`.
 - Tab completion.
 - Custom text editor - kedit.
 - IRC chat.
+- Command specific help messages
 - no external dependancies (handwritten python all the way).
 
 # TODO
