@@ -206,12 +206,15 @@ def mkdir(path):
         print(f"{red}Not a valid/free directory path!{reset}")
 
 def cat(filename):
-    if os.path.exists(filename):
+    if os.path.isfile(filename):
         with open(filename) as handle:
             for line in handle:
                 print(line.strip())
     else:
-        print(f"{red}File does not exist!{reset}")
+        if os.path.isdir(filename):
+            print(f"{red}{filename} is a directory not file!{reset}")
+        else:
+            print(f"{red}File does not exist!{reset}")
 
 def history():
     histfile.seek(0)
@@ -315,7 +318,8 @@ def colour():
 def help(func=None):
     if func is None:
         global available
-        max_comm_len = max(len(func) for func in available) + 5
+        # max_comm_len = max(len(func) for func in available) + 5
+        max_comm_len = (cols//4)-4
         print(f'{yellow}Available Commands:{reset}')
 
         # I want list in five columns (neat stonk)
@@ -323,10 +327,10 @@ def help(func=None):
         for obj in available:
             print(obj.ljust(max_comm_len),end="")
             counter+=1
-            if counter%5==0 or counter==len(available):
+            if counter%4==0 or counter==len(available):
                 print()
-        print(f'{yellow}+ Any python3 one-liners {reset}')
-        print(f'{yellow}Hit help <command> for help on specific commands{reset}')
+        print(f'{yellow}+ Any python3 one-liner {reset}')
+        print(f'{yellow}Use help <command> for help on specific commands{reset}')
     else:
         if usage.get(func) is None:
             print(f'{red}Help on {func} is not available {reset}')
@@ -393,10 +397,11 @@ def take_input(PS1):
             space = command.index(' ')
         except:
             space = len(command)
+
         isexit = command=='quit' or command=='exit'
 
         # If the first word of command is a valid function colour it green
-        if len(command)!=0 and (command.split()[0] in available or isexit):
+        if len(command.strip())!=0 and (command.split()[0] in available or isexit):
             tempcmd = green+command[:space]+reset+command[space:]
             fprint(PS1+tempcmd)
 
@@ -468,6 +473,22 @@ def take_input(PS1):
             # Last element of shlex.split has to be path to complete
             tocomplete = command_split[-1]
             possible = []
+            possible_cmd = []
+
+            # If first word i.e command is tabbed
+            # we must find the complete command and print
+            if len(command_split)==1:
+                for func in available:
+                    if func.startswith(tocomplete):
+                        possible_cmd.append(func)
+                if len(possible_cmd)==1:
+                    command = possible_cmd[0]
+
+                if len(possible_cmd)>1:
+                    toprint = f'{red}Multiple possible commands{reset}'
+                    clrline()
+                    fprint(PS1+toprint)
+                    time.sleep(0.7)
 
             # Get directory to search in if there is a separator in path
             # else use the current directory
@@ -478,23 +499,27 @@ def take_input(PS1):
             else:
                 directory = os.curdir
 
-            for name in os.listdir(directory):
-                if name.startswith(tocomplete):
-                    possible.append(name)
-            if len(possible)==1:
-                command_split[-1] = directory+os.sep+possible[0]
-                command = ' '.join(command_split)
 
-            # If multiple completion possibilities just tell the user
-            else:
-                if len(possible)>0:
-                    toprint = f'{red}Multiple possibilites{reset}'
+            # If no such command exists then
+            # tocomplete can only be a file/directory
+            if len(possible_cmd)==0:
+                for name in os.listdir(directory):
+                    if name.startswith(tocomplete):
+                        possible.append(name)
+                if len(possible)==1:
+                    command_split[-1] = directory+os.sep+possible[0]
+                    command = ' '.join(command_split)
+
+                # If multiple completion possibilities just tell the user
                 else:
-                    toprint = f'{red}No such file/directory{reset}'
+                    if len(possible)>0:
+                        toprint = f'{red}Multiple possibilites{reset}'
+                    else:
+                        toprint = f'{red}No such file/directory{reset}'
 
-                clrline()
-                fprint(PS1+toprint)
-                time.sleep(0.7)
+                    clrline()
+                    fprint(PS1+toprint)
+                    time.sleep(0.7)
 
         elif actual_char() in string.printable:
             command = command[:cur_pos()]+actual_char()+command[cur_pos():]
@@ -540,34 +565,34 @@ def runShell():
             command_type = 2
 
             # If no arguments just add open close brackets and run
-            if len(split_com)==1:
-                command += '()'
+            # if len(split_com)==1:
+            #     command += '()'
 
             # If not parse through and add ( and , and " wherever needed to create
             # valid python function call string
-            else:
-                split_com.insert(1,"(")
-                split_com.append(")")
-                start_quote = lambda word: word.startswith("'") or word.startswith('"')
-                end_quote = lambda word: word.endswith("'") or word.endswith('"')
-                sawQuote = False
-                for i in range(2,len(split_com)-1):
+            # else:
+            split_com.insert(1,"(")
+            split_com.append(")")
+            start_quote = lambda word: word.startswith("'") or word.startswith('"')
+            end_quote = lambda word: word.endswith("'") or word.endswith('"')
+            sawQuote = False
+            for i in range(2,len(split_com)-1):
+                word = split_com[i]
+
+                if not sawQuote and not (start_quote(word) or end_quote(word)):
+                    split_com[i]="'"+split_com[i]+"'"
                     word = split_com[i]
 
-                    if not sawQuote and not (start_quote(word) or end_quote(word)):
-                        split_com[i]="'"+split_com[i]+"'"
-                        word = split_com[i]
+                elif start_quote(word):
+                    sawQuote=True
 
-                    elif start_quote(word):
-                        sawQuote=True
+                if end_quote(word) and i!=len(split_com)-2:
+                    split_com[i]+=","
+                    sawQuote = False
+                
+            command = ''.join(split_com[:2])+' '.join(split_com[2:-1])+split_com[-1]
 
-                    if end_quote(word) and i!=len(split_com)-2:
-                        split_com[i]+=","
-                        sawQuote = False
-                    
-                command = ''.join(split_com[:2])+' '.join(split_com[2:-1])+split_com[-1]
-
-        # If it executes as python then type 1
+        # If it executes as python or is exit then type 1
         elif 'exit' in command:
             command_type = 1
         elif exec(command) is None:
