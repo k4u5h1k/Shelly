@@ -2,20 +2,16 @@
 import os
 import re
 import sys
-import platform
-import signal
+import time
+import shlex
 import shutil
 import socket
-import time
-import subprocess
-import shlex
 import string
-from datetime import datetime
-from os.path import expanduser
+import platform
 
 script_loc = os.path.dirname(os.path.realpath(__file__))
 
-# Initialize history file
+# Loading history file
 histarray = []
 histpath = os.path.join(script_loc,'.shelly_history')
 if os.path.exists(histpath):
@@ -28,11 +24,51 @@ histfile = open(histpath, 'a+')
 sys.path.insert(0, os.path.join(script_loc,'scripts'))
 
 iswin = sys.platform.startswith('win')
+
 if iswin:
+    import msvcrt
+    import sys
+
+    win_encoding = "mbcs"
+
+    XE0_OR_00 = "\x00\xe0"
+
+    # Get a single character on Windows.
+    def readchar(blocking=False):
+        while msvcrt.kbhit():
+            msvcrt.getch()
+        ch = msvcrt.getch()
+        # print('ch={}, type(ch)={}'.format(ch, type(ch)))
+        # while ch.decode(win_encoding) in unicode('\x00\xe0', win_encoding):
+        while ch.decode(win_encoding) in XE0_OR_00:
+            # print('found x00 or xe0')
+            msvcrt.getch()
+            ch = msvcrt.getch()
+
+        return ch if sys.version_info.major > 2 else ch.decode(encoding=win_encoding)
+
+    # Username is stored in USERNAME env variable in windows
     USER = 'USERNAME'
+
     # This makes ansi escape codes work in cmd magically (O_O)
     os.system('color')
+
 else:
+    import termios
+    import tty
+
+    # Get a single character on linux
+    def readchar():
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setcbreak(sys.stdin.fileno())
+            ch = sys.stdin.read(1)
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        return ch
+
+    # Username is stored in $USER env variable in windows
     USER = 'USER'
 
 reset = '\033[0m'
@@ -84,6 +120,7 @@ usage = {
             "Usage: mv <source> <destination>"),
     'run': ("Run a python file\n"
             "Usage: run <python_file>"),
+    'ip': 'Print your private ip',
     'chat': 'Chat with IRC',
     'color': 'Change prompt colour',
     'help': 'display pysh help'
@@ -93,7 +130,8 @@ def kedit(path=None):
     try:
         from kedit import editFile
     except:
-        print(f'{red}kedit.py was not found in scripts directory, it will not work{reset}')
+        print(f'{red}kedit.py was not found in scripts \
+                directory, it will not work{reset}')
         return
 
     editFile(path)
@@ -102,7 +140,8 @@ def cowsay(string=None):
     try:
         from cow import cow
     except:
-        print(f'{red}cow.py was not found in scripts directory, it will not work{reset}')
+        print(f'{red}cow.py was not found in scripts \
+                directory, it will not work{reset}')
         return
 
     if string is None:
@@ -122,7 +161,7 @@ def grep(path=None, tosearch=None):
 
 def cd(path=None):
     if path is None:
-        cd(expanduser('~'))
+        cd(os.path.expanduser('~'))
     else:
         if os.path.isdir(path):
             os.chdir(path)
@@ -145,7 +184,7 @@ def ls(dirname=None):
         ls = os.listdir(os.curdir)
     else:
         if '~' in dirname:
-            dirname = dirname.replace('~', expanduser('~'))
+            dirname = dirname.replace('~', os.path.expanduser('~'))
 
         if os.path.isdir(dirname):
             ls = os.listdir(dirname)
@@ -179,10 +218,12 @@ def file(filename):
     try:
         from identify import tags_from_path
     except:
-        print(f'{red}identify.py was not found in scripts directory, it will not work{reset}')
+        print(f'{red}identify.py was not found in \
+                scripts directory, it will not work{reset}')
 
     if os.path.exists(filename):
-        print(filename+':'+' '.join(sorted(tags_from_path(filename),key=lambda x:len(x))))
+        print(filename+':'+' '.join(sorted(tags_from_path(filename),
+            key=lambda x:len(x))))
     else:
         print(f"{red}Not a valid file path!{reset}")
 
@@ -223,6 +264,7 @@ def history():
         print(f"{(str(counter)+'.').ljust(3)} {command.rstrip()}")
 
 def kill(pid):
+    import signal
     os.kill(pid, signal.SIGSTOP)
 
 def df():
@@ -251,6 +293,7 @@ def hostname():
     print(socket.gethostname())
 
 def date():
+    from datetime import datetime
     print(datetime.now().strftime("%a %b %d %H:%M:%S %Y"))
 
 def cp(source=None, destination=None):
@@ -280,8 +323,19 @@ def run(filename=None,**kwargs):
         except:
             return
 
+def ip():
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect(("8.8.8.8", 80))
+    print(yellow+s.getsockname()[0]+reset)
+    s.close()
+
 def chat():
-    run(os.path.join(script_loc,'scripts','irc_client.py'))
+    client_path = os.path.join(script_loc,'scripts','irc_client.py')
+    if os.path.exists(client_path):
+        run(client_path)
+    else:
+        print("{red} Please place irc_client.py is \
+                scripts directory to access chat {reset}")
 
 def colour():
     global usercolour, dircolour, symbolcolour
@@ -349,13 +403,14 @@ for key, value in local_locals:
     if callable(value) and value.__module__==__name__:
         available.append(key)
 
-# print to same line
+# Print to same line
 fprint = lambda x: print(x,end='',flush=True)
 
-# clear the current line
+# Clear the current line
 cols = shutil.get_terminal_size().columns
 clrline = lambda : fprint('\r'+' '*cols+'\r')
 
+# Persistent prompt colours across sessions
 colourfile = os.path.join(script_loc,'.colours')
 if os.path.exists(colourfile):
     with open(colourfile,'r+') as f:
@@ -367,10 +422,6 @@ else:
 
 
 def take_input(PS1):
-    try:
-        from readchar import readchar
-    except:
-        return input(PS1)
 
     backspace = b'\x7f' if not iswin else b'\x08'
     tab = b'\t'
@@ -415,7 +466,7 @@ def take_input(PS1):
             fprint(f'\x1b[{lr[0].decode("utf-8")}'*lr[1])
 
         # Read a character
-        char = readchar.readchar()
+        char = readchar()
 
         # Windows readchar() returns byte and darwin returns string
         # So must have functions to interconvert
@@ -528,7 +579,7 @@ def runShell():
     cwd = os.getcwd()
 
     # Replace home in prompt with '~'
-    if cwd == expanduser('~'):
+    if cwd == os.path.expanduser('~'):
         dirname = '~'
     else:
         if cwd == '/':
