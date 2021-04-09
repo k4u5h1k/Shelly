@@ -11,6 +11,9 @@ import platform
 
 script_loc = os.path.dirname(os.path.realpath(__file__))
 
+# Adding scripts to PYTHONPATH so everything in scripts is directly importable
+sys.path.insert(0, os.path.join(script_loc,'scripts'))
+
 # Loading history file
 histarray = []
 histpath = os.path.join(script_loc,'.shelly_history')
@@ -20,16 +23,10 @@ if os.path.exists(histpath):
             histarray.append(line.strip())
 histfile = open(histpath, 'a+')
 
-# Adding scripts to PYTHONPATH so everything in scripts is directly importable
-sys.path.insert(0, os.path.join(script_loc,'scripts'))
-
 iswin = sys.platform.startswith('win')
 if iswin:
     import msvcrt
-    import sys
-
     win_encoding = "mbcs"
-
     XE0_OR_00 = "\x00\xe0"
 
     # Get a single character on Windows.
@@ -56,7 +53,7 @@ else:
     import termios
     import tty
 
-    # Get a single character on linux
+    # Get a single character on Linux
     def readchar():
         fd = sys.stdin.fileno()
         old_settings = termios.tcgetattr(fd)
@@ -149,7 +146,7 @@ def cowsay(string=None):
 
 def grep(path=None, tosearch=None):
     if path is None or tosearch is None:
-        print('')
+        print('Usage: grep <filename> <string to search>')
     if os.path.isfile(path):
         with open(path) as handle:
             for number, line in enumerate(handle):
@@ -498,17 +495,17 @@ def take_input(PS1):
                 # If key is up or down we scroll through
                 # history
                 if key_is(up):
-                    if histcount+1>-1:
+                    if histcount>0:
                         histcount -= 1
                         command = histarray[histcount]
-                        left[1] = 0
-                        right[1] = 0
-                if key_is(down):
-                    if histcount+1<len(histarray):
+                elif key_is(down):
+                    if histcount<len(histarray)-1:
                         histcount += 1
                         command = histarray[histcount]
                     else:
                         command = ''
+
+                if key_is(up) or key_is(down):
                     left[1] = 0
                     right[1] = 0
 
@@ -614,59 +611,59 @@ def runShell():
     2: Shell Command
     3: Invalid
     '''
-    try:
+
+    # Now split the user input and run 
+    # it through our parsing routine
+    # if first word is valid function
+    split_com = shlex.split(command)
+    if split_com[0] in available:
+        command_type = 2
+
+        # Parse through command and add '(', ',', ')' and '"' 
+        # wherever needed to create valid python function call string
+        start_with_quote = lambda word: word.startswith("'")\
+                or word.startswith('"')
+        end_with_quote = lambda word: word.endswith("'") or \
+                word.endswith('"')
+        sawQuote = False
+        for i in range(1,len(split_com)):
+            word = split_com[i]
+
+            if not sawQuote and not \
+                    (start_with_quote(word) or end_with_quote(word)):
+                split_com[i]="'"+split_com[i]+"'"
+                word = split_com[i]
+
+            elif start_with_quote(word):
+                sawQuote=True
+
+            if end_with_quote(word) and i!=len(split_com)-2:
+                split_com[i]+=","
+                sawQuote = False
+            
+        args = ' '.join(split_com[1:])
+        command = f'{split_com[0]}({args})'
+
+    # If it executes as python or is exit then type 1
+    elif 'exit' in command:
+        command_type = 1
+
+    else:
         # Dont print anything here onwards to stdout
         # to suppress whatever bs exec prints
         old_stdout = sys.stdout
         sys.stdout = None 
 
-        # Now split the user input and run it through our parsing routine
-        split_com = shlex.split(command)
+        try:
+            if exec(command) is None:
+                command_type = 1
 
+        # If error occurs it is invalid so type 3
+        except:
+            command_type = 3
 
-        # If first word of command a valid shell function type 2
-        if split_com[0] in available:
-            command_type = 2
-
-            # If no arguments just add open close brackets and run
-            # if len(split_com)==1:
-            #     command += '()'
-            # If not parse through and add ( and , and " wherever needed to create
-            # valid python function call string
-            # else:
-            split_com.insert(1,"(")
-            split_com.append(")")
-            start_quote = lambda word: word.startswith("'") or word.startswith('"')
-            end_quote = lambda word: word.endswith("'") or word.endswith('"')
-            sawQuote = False
-            for i in range(2,len(split_com)-1):
-                word = split_com[i]
-
-                if not sawQuote and not (start_quote(word) or end_quote(word)):
-                    split_com[i]="'"+split_com[i]+"'"
-                    word = split_com[i]
-
-                elif start_quote(word):
-                    sawQuote=True
-
-                if end_quote(word) and i!=len(split_com)-2:
-                    split_com[i]+=","
-                    sawQuote = False
-                
-            command = ''.join(split_com[:2])+' '.join(split_com[2:-1])+split_com[-1]
-
-        # If it executes as python or is exit then type 1
-        elif 'exit' in command:
-            command_type = 1
-        elif exec(command) is None:
-            command_type = 1
-
-    # If error occurs it is invalid so type 3
-    except:
-        command_type = 3
-
-    # From here resume printing to stdout
-    sys.stdout = old_stdout
+        # Resume printing to stdout
+        sys.stdout = old_stdout
 
     if command=='exit' or command=='quit':
         raise KeyboardInterrupt
