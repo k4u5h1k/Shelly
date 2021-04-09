@@ -25,9 +25,9 @@ def string_processing(args):
 
         flag = len(lines[0])
         if flag < 50:
-            print("  " + "_" * flag)
-            print("< " + lines[0] + " " * (flag - len(lines[0]) + 1) + ">")
-            print("  " + "=" * flag)
+            print("   " + "_" * flag)
+            print(" < " + lines[0] + " " * (flag - len(lines[0]) + 1) + ">")
+            print("   " + "=" * flag)
             flg.append(flag)
         else:
             args = list("".join(lines[0]))

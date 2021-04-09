@@ -24,7 +24,6 @@ histfile = open(histpath, 'a+')
 sys.path.insert(0, os.path.join(script_loc,'scripts'))
 
 iswin = sys.platform.startswith('win')
-
 if iswin:
     import msvcrt
     import sys
@@ -195,8 +194,9 @@ def ls(dirname=None):
 
     if ls is not None and len(ls)>0:
         ls_cols = 3
-        good_length = (cols//ls_cols)-ls_cols
-        ls = list(((name[:good_length-2] + '..') if len(name) > good_length else name) for name in ls)
+        good_length = (cols()//ls_cols)-ls_cols
+        ls = list(((name[:good_length-2] + '..')\
+                if len(name) > good_length else name) for name in ls)
         max_file_len = max(len(name) for name in ls) + 5
 
         # I want list in three columns (neat stonk)
@@ -324,10 +324,13 @@ def run(filename=None,**kwargs):
             return
 
 def ip():
-    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    s.connect(("8.8.8.8", 80))
-    print(yellow+s.getsockname()[0]+reset)
-    s.close()
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        print(green+s.getsockname()[0]+reset)
+        s.close()
+    except Exception as err:
+        print(f'{red}Offline{reset}')
 
 def chat():
     client_path = os.path.join(script_loc,'scripts','irc_client.py')
@@ -350,15 +353,15 @@ def colour():
                 ]
 
     toprint = "\n".join(
-    list(f'{globals()[i]}{i}{reset}' for i in available)
-    )
+            list(f'{globals()[i]}{i}{reset}' for i in available))
 
     print(f'Available colours: \n{toprint}')
     user = input('Username colour: ').lower()
     directory = input('Directory colour: ').lower()
     symbol = input('Prompt symbol colour: ').lower()
     if user in available and directory in available and symbol in available:
-        # Another way to saying access colour from global variable which user input
+        # Another way to saying access colour from 
+        # global variable which user input
         usercolour = globals()[user]
         dircolour = globals()[directory]
         symbolcolour = globals()[symbol]
@@ -373,10 +376,10 @@ def help(func=None):
     if func is None:
         global available
         # max_comm_len = max(len(func) for func in available) + 5
-        max_comm_len = (cols//4)-4
+        max_comm_len = cols()//4-4
         print(f'{yellow}Available Commands:{reset}')
 
-        # I want list in five columns (neat stonk)
+        # I want list in four columns (neat stonk)
         counter = 0
         for obj in available:
             print(obj.ljust(max_comm_len),end="")
@@ -407,8 +410,8 @@ for key, value in local_locals:
 fprint = lambda x: print(x,end='',flush=True)
 
 # Clear the current line
-cols = shutil.get_terminal_size().columns
-clrline = lambda : fprint('\r'+' '*cols+'\r')
+cols = lambda : shutil.get_terminal_size().columns
+clrline = lambda : fprint('\r'+' '*cols()+'\r')
 
 # Persistent prompt colours across sessions
 colourfile = os.path.join(script_loc,'.colours')
@@ -420,9 +423,7 @@ else:
     dircolour = green
     symbolcolour = purple
 
-
 def take_input(PS1):
-
     backspace = b'\x7f' if not iswin else b'\x08'
     tab = b'\t'
     up = b'A'
@@ -441,18 +442,24 @@ def take_input(PS1):
     # entered
     while True:
 
+        # If command is wider than terminal width you must move up
+        # a little before printing
+        printlen = len(command+re.sub(r'\x1b\[.+?m','',PS1))
+        for _ in range(printlen//(cols()+1)):
+            clrline()
+            # Moving up
+            fprint('\x1b[A')
+
         # Clear line and print prompt with command
         clrline()
 
-        try:
-            space = command.index(' ')
-        except:
-            space = len(command)
+        space = command.index(' ') if ' ' in command else len(command)
 
         isexit = command=='quit' or command=='exit'
 
         # If the first word of command is a valid function colour it green
-        if len(command.strip())!=0 and (command.split()[0] in available or isexit):
+        if len(command.strip())!=0 and \
+                (command.split()[0] in available or isexit):
             tempcmd = green+command[:space]+reset+command[space:]
             fprint(PS1+tempcmd)
 
@@ -476,20 +483,22 @@ def take_input(PS1):
 
         # In windows pressing enter returns linefeed not newline -_-
         if actual_char()=='\n' or actual_char()=='\r':
+            if len(command)==0:
+                continue
             print()
             return command
 
         # If key is escape
         elif key_is(b'\x1b'):
-            char = readchar.readchar()
+            char = readchar()
             # if next character is '[' it is probably an arrow key
             if key_is(b'['):
-                char = readchar.readchar()
+                char = readchar()
 
                 # If key is up or down we scroll through
                 # history
                 if key_is(up):
-                    if histcount-1>-1:
+                    if histcount+1>-1:
                         histcount -= 1
                         command = histarray[histcount]
                         left[1] = 0
@@ -558,7 +567,7 @@ def take_input(PS1):
                     if name.startswith(tocomplete):
                         possible.append(name)
                 if len(possible)==1:
-                    command_split[-1] = directory+os.sep+possible[0]
+                    command_split[-1] = f"'{directory+os.sep+possible[0]}'"
                     command = ' '.join(command_split)
 
                 # If multiple completion possibilities just tell the user
@@ -594,17 +603,21 @@ def runShell():
     command = take_input(PS1)
     command_copy = command
 
-    # if command is a directory cd to it
+    # If command is a directory cd to it
     if os.path.isdir(command):
         cd(command)
         return
 
-    # possible_types = {1: 'Python line', 2: 'Shell Command', 3: 'Invalid'}
-
-    old_stdout = sys.stdout
+    '''
+    Possible command types 
+    1. Python line
+    2: Shell Command
+    3: Invalid
+    '''
     try:
         # Dont print anything here onwards to stdout
         # to suppress whatever bs exec prints
+        old_stdout = sys.stdout
         sys.stdout = None 
 
         # Now split the user input and run it through our parsing routine
@@ -618,7 +631,6 @@ def runShell():
             # If no arguments just add open close brackets and run
             # if len(split_com)==1:
             #     command += '()'
-
             # If not parse through and add ( and , and " wherever needed to create
             # valid python function call string
             # else:
@@ -663,7 +675,7 @@ def runShell():
         return
     else:
         try:
-            exec(command)
+            exec(command,globals(),locals())
         except Exception as err:
             command_type = 3
             print(f'{red}{err}{reset}')
@@ -681,7 +693,6 @@ if __name__ == '__main__':
 
     except (KeyboardInterrupt, ValueError):
         clrline()
-        print(yellow+"Exiting cleanly"+reset)
     except Exception as err:
         clrline()
         print(f'{red}{err}{reset}')

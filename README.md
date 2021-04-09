@@ -1,5 +1,5 @@
 # Shelly
-A no external dependancy modular single script bash-like python REPL with realtime IRC chat and custom text editor (kedit).
+A no external dependancy, modular, single script, bash-like python REPL with realtime IRC chat and custom text editor `kedit`.
 
 # Usage 
 clone this repo and run `python3 shell.py`.
@@ -27,7 +27,7 @@ clone this repo and run `python3 shell.py`.
 - IRC chat.
 - Command specific help messages
 - no external dependancies (handwritten python all the way).
-- Can be used alone! Meaning user may `rm -rf scripts`   
+- `shell.py` can be used alone! Meaning user may `rm -rf scripts`   
   if they do not desire chat and text editor functionality.
 
 # TODO
