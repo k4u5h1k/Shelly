@@ -45,7 +45,6 @@ def editFile(path=None):
     if os.path.isfile(path):
         with open(path,'r+') as f:
             towrite += f.read().rstrip()
-    lines = towrite.split('\n')
     scroll = 0
 
     # Rows and Columns in our terminal window
@@ -61,15 +60,17 @@ def editFile(path=None):
     clr = lambda: fprint(clear_hex)
 
     # Print banner
-    banner = lambda: print(clear_hex+"\x1b[30;37m"+'KEDIT V1'.center(columns)+"\x1b[0m")
+    padding = ' '*((columns-8)//2) if columns>8 else ''
+    print_banner = lambda: print(clear_hex+padding+"\x1b[30;31m"+'KEDIT V1'+"\x1b[0m"+padding)
 
-    # Start banner
+    # Start print_banner
     welcome = [f'Editing {path}',
                f'Hit escape twice to save and exit',
                f'Any other key after escape to exit without saving',
                f'Press any key to continue']
     colors = [yellow,green,red,purple]
-    banner()
+    print_banner()
+
     # This will hide the cursor
     fprint('\033[?25l')
     fprint('\n'*(termrows//2-2))
@@ -80,8 +81,12 @@ def editFile(path=None):
     fprint('\033[?25h')
 
     while True:
-        # print title banner
-        banner()
+        # print title print_banner
+        print_banner()
+
+        # All editing is done within a split array
+        # joined in last line
+        lines = towrite.split('\n')
 
         # Might need to scroll screen if file is long
         # we will calculate that later
@@ -108,9 +113,6 @@ def editFile(path=None):
         # Check if char is a specific byte
         key_is = lambda x: byte_char()==x
 
-        # All editing is done within a split array
-        # joined in last line
-        lines = towrite.split('\n')
         linecount = len(lines)-1
         curs_row = lambda : down[1]-up[1]
         curs_col = lambda : right[1]-left[1]
@@ -163,7 +165,7 @@ def editFile(path=None):
                     char = ' '*4
                 toedit = toedit[:curs_col()]+actual_char()+toedit[curs_col():]
                 lines[curs_row()] = toedit
-                if char=='\n':
+                if actual_char()=='\n':
                     left[1] = 0
                     right[1] = 0
                     down[1] += 1
