@@ -9,7 +9,12 @@ import socket
 import string
 import platform
 
-script_loc = os.path.dirname(os.path.realpath(__file__))
+try:
+    script_loc = os.path.dirname(os.path.realpath(__file__))
+except:
+    # If run command is used to run this file
+    # __file__ will raise error as not defined
+    script_loc = os.getcwd()
 
 # Adding scripts to PYTHONPATH so everything in scripts is directly importable
 sys.path.insert(0, os.path.join(script_loc,'scripts'))
@@ -76,7 +81,7 @@ purple = '\033[35m'
 cyan = '\033[36m'
 white = '\033[29m'
 
-# Show corresponding help message when command is help <function>
+# Show corresponding help message when command is help <function name>
 usage = {
     'kedit': ("Our very own text editor\n"
                 "Usage: kedit <filename>(optional: default='Untitled.txt')"),
@@ -94,8 +99,8 @@ usage = {
             "Usage: file <filename>"),
     'touch': ("Create empty file\n"
             "Usage: touch <filename>"),
-    'rm': ("Remove a file\n"
-            "Usage: rm <filename>"),
+    'rm': ("Remove a file or directory\n"
+            "Usage: rm <path>"),
     'mkdir': ("Make directory\n"
             "Usage: mkdir <directory_name>"),
     'cat': ("Print contents of file to stdout\n"
@@ -114,6 +119,10 @@ usage = {
             "Usage: cp <source> <destination>"),
     'mv': ("Move a file from source path to destination path\n"
             "Usage: mv <source> <destination>"),
+    'find': ("Walk a file heirarchy\n"
+            "Usage: find <start_dir> <to_find>"),
+    'which': ("Locate a program file in the user's path\n"
+            "Usage: which <cmd>"),
     'run': ("Run a python file\n"
             "Usage: run <python_file>"),
     'ip': 'Print your private ip',
@@ -166,6 +175,38 @@ def cd(path=None):
                 print(f"{red}That is a file not directory!{reset}")
             else:
                 print(f"{red}{path} is not a valid directory!{reset}")
+
+def find(start=None, tofind=None, firstcall=True):
+    global found
+    if start is None or tofind is None:
+        print('Usage: find <start> <file to search>')
+    else:
+        if firstcall:
+            found = False
+
+        if not found:
+            try:
+                if os.path.isdir(start):
+                    for item in os.listdir(start):
+                        if re.match(tofind, item):
+                            found = True
+                            print(os.path.join(start,item))
+                            return
+                        if os.path.isdir(os.path.join(start, item)):
+                            find(os.path.join(start, item),
+                                tofind,
+                                False)
+                else:
+                    print(f"{red}{start} is not a valid directory!{reset}")
+
+            except KeyboardInterrupt:
+                pass
+
+def which(cmd=None):
+    if cmd is None:
+        print(f'Usage: which <cmd>')
+    else:
+        print(shutil.which(cmd))
 
 def pwd():
     print(os.getcwd())
@@ -230,9 +271,14 @@ def touch(filename):
     else:
         print(f"{red}file already exists{reset}")
 
-def rm(filename):
-    if os.path.exists(filename):
-        os.remove(filename)
+def rm(path):
+    if os.path.exists(path):
+        if os.path.isfile(path):
+            os.remove(path)
+        elif os.path.isdir(path):
+            choice = input("Delete directory?(y/n) ")
+            if choice=='' or choice.lower().startswith('y'):
+                shutil.rmtree(path)
     else:
         print(f"{red}Not a valid file path!{reset}")
 remove = rm
@@ -247,7 +293,7 @@ def cat(filename):
     if os.path.isfile(filename):
         with open(filename) as handle:
             for line in handle:
-                print(line.strip())
+                print(line.rstrip())
     else:
         if os.path.isdir(filename):
             print(f"{red}{filename} is a directory not file!{reset}")
@@ -258,7 +304,7 @@ def history():
     histfile.seek(0)
     lines = histfile.readlines()
     for counter,command in enumerate(lines):
-        print(f"{(str(counter)+'.').ljust(3)} {command.rstrip()}")
+        print(f"{(str(counter+1)+'.').ljust(3)} {command.rstrip()}")
 
 def kill(pid):
     import signal
@@ -316,8 +362,13 @@ def run(filename=None,**kwargs):
         with open(filename, "rb") as source_file:
             code = compile(source_file.read(), filename, "exec")
         try:
-            exec(code, kwargs)
-        except:
+            pid = os.fork()
+            if pid:
+                os.wait()
+            else:
+                exec(code, kwargs)
+        except Exception as err:
+            print(f'{red}{err}{reset}')
             return
 
 def ip():
@@ -369,6 +420,10 @@ def colour():
     else:
         print(f'{red}One of more inputs were invalid!{reset}')
     
+def exit():
+    sys.exit()
+quit = exit
+
 def help(func=None):
     if func is None:
         global available
@@ -430,6 +485,7 @@ def take_input(PS1):
     
     command = ''
     histcount = len(histarray)
+    prevlen = 0
 
     # Cursor position is length of command minus effective
     # cursor left movement
@@ -438,11 +494,10 @@ def take_input(PS1):
     # We take input while True and stop when newline is
     # entered
     while True:
-
+        printlen = len(command+re.sub(r'\x1b\[.+?m','',PS1))
         # If command is wider than terminal width you must move up
         # a little before printing
-        printlen = len(command+re.sub(r'\x1b\[.+?m','',PS1))
-        for _ in range(printlen//(cols()+1)):
+        for _ in range(prevlen//(cols()+1)):
             clrline()
             # Moving up
             fprint('\x1b[A')
@@ -454,15 +509,18 @@ def take_input(PS1):
 
         isexit = command=='quit' or command=='exit'
 
-        # If the first word of command is a valid function colour it green
+        # If the first word of command is a 
+        # valid function colour it green
         if len(command.strip())!=0 and \
                 (command.split()[0] in available or isexit):
             tempcmd = green+command[:space]+reset+command[space:]
-            fprint(PS1+tempcmd)
-
+            toprint = PS1+tempcmd
         # Otherwise just print it as is
         else:
-            fprint(PS1+command)
+            toprint = PS1+command
+
+        fprint(toprint)
+        prevlen = printlen
 
         # After printing cursor is at the end of current line
         # So we must move cursor it to its last known position
@@ -503,6 +561,7 @@ def take_input(PS1):
                         histcount += 1
                         command = histarray[histcount]
                     else:
+                        histcount = len(histarray)
                         command = ''
 
                 if key_is(up) or key_is(down):
@@ -564,7 +623,8 @@ def take_input(PS1):
                     if name.startswith(tocomplete):
                         possible.append(name)
                 if len(possible)==1:
-                    command_split[-1] = f"'{directory+os.sep+possible[0]}'"
+                    complete = re.sub(r' ','\ ',possible[0])
+                    command_split[-1] = f"{directory+os.sep+complete}"
                     command = ' '.join(command_split)
 
                 # If multiple completion possibilities just tell the user
@@ -641,12 +701,8 @@ def runShell():
                 split_com[i]+=","
                 sawQuote = False
             
-        args = ' '.join(split_com[1:])
+        args = ','.join(split_com[1:])
         command = f'{split_com[0]}({args})'
-
-    # If it executes as python or is exit then type 1
-    elif 'exit' in command:
-        command_type = 1
 
     else:
         # Dont print anything here onwards to stdout
@@ -665,9 +721,7 @@ def runShell():
         # Resume printing to stdout
         sys.stdout = old_stdout
 
-    if command=='exit' or command=='quit':
-        raise KeyboardInterrupt
-    elif command_type==3:
+    if command_type==3:
         print(f"{red}Invalid command {user}!{reset}")
         return
     else:
