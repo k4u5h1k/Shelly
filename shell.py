@@ -620,7 +620,7 @@ def take_input(PS1):
             # tocomplete can only be a file/directory
             if len(possible_cmd)==0:
                 for name in os.listdir(directory):
-                    if name.startswith(tocomplete):
+                    if name.lower().startswith(tocomplete.lower()):
                         possible.append(name)
                 if len(possible)==1:
                     complete = re.sub(r' ','\ ',possible[0])
