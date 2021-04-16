@@ -84,6 +84,10 @@ def editFile(path=None):
         # print title print_banner
         print_banner()
 
+        # print((f'up:{up[1]} down:{down[1]} '
+        #        f'left:{left[1]} right:{right[1]} '
+        #        f'rows:{termrows-1}  scroll:{scroll}/{(down[1]-up[1])-(termrows-1)}'))
+
         # All editing is done within a split array
         # joined in last line
         lines = towrite.split('\n')
@@ -113,7 +117,7 @@ def editFile(path=None):
         # Check if char is a specific byte
         key_is = lambda x: byte_char()==x
 
-        linecount = len(lines)-1
+        linecount = len(lines)
         curs_row = lambda : down[1]-up[1]
         curs_col = lambda : right[1]-left[1]
 
@@ -130,7 +134,7 @@ def editFile(path=None):
                             right[1] = len(lines[curs_row()])
                             left[1] = 0;
                 if key_is(down[0]):
-                    if curs_row()+1<=linecount:
+                    if curs_row()+1<=linecount-1:
                         down[1]+=1
                         if curs_col()>len(lines[curs_row()])-1:
                             right[1] = len(lines[curs_row()])
@@ -191,8 +195,8 @@ def editFile(path=None):
         # If our total lines is greater than terminal length 
         # we could need to scroll down if cursor is on the last line
         if linecount>termrows:
-            check_scroll = (down[1]+1)-(up[1])-termrows
-            if check_scroll>0:
+            check_scroll = (down[1]-up[1])-(termrows-1)
+            if check_scroll>=0:
                 scroll = check_scroll
 
     towrite = towrite.rstrip('\n')+'\n'
