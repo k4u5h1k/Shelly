@@ -8,6 +8,7 @@ import shutil
 import socket
 import string
 import platform
+import requests
 
 try:
     script_loc = os.path.dirname(os.path.realpath(__file__))
@@ -83,52 +84,54 @@ white = '\033[29m'
 
 # Show corresponding help message when command is help <function name>
 usage = {
-    'kedit': ("Our very own text editor\n"
-                "Usage: kedit <filename>(optional: default='Untitled.txt')"),
+    'kedit' : ("Our very own text editor\n"
+                "Usage: kedit <filename> (optional: default='Untitled.txt')"),
     'cowsay': ("Make a cow say something!\n"
                 "Usage: cowsay 'string' "),
-    'grep': ("Search for a string in a file\n"
+    'grep'  : ("Search for a string in a file\n"
             "Usage: grep <filename> <string to search>"),
-    'cd': ("Change current working directory\n"
-            "Usage: cd path_to_directory(optional: default='~') "),
-    'pwd': 'Print current working directory',
+    'cd'    : ("Change current working directory\n"
+            "Usage: cd path_to_directory (optional: default='~')"),
+    'pwd'   : 'Print current working directory',
     'whoami': 'Print current user',
-    'ls': 'Print contents of current working directory',
-    'clear': 'Clear screen',
-    'file': ("Identify file metadata\n"
-            "Usage: file <filename>"),
-    'touch': ("Create empty file\n"
-            "Usage: touch <filename>"),
-    'rm': ("Remove a file or directory\n"
-            "Usage: rm <path>"),
-    'mkdir': ("Make directory\n"
-            "Usage: mkdir <directory_name>"),
-    'cat': ("Print contents of file to stdout\n"
-            "Usage: cat <filename>"),
+    'ls'    : 'Print contents of current working directory',
+    'clear' : 'Clear screen',
+    'file'  : ("Identify file metadata\n"
+              "Usage: file <filename>"),
+    'touch' : ("Create empty file\n"
+              "Usage: touch <filename>"),
+    'rm'    : ("Remove a file or directory\n"
+              "Usage: rm <path>"),
+    'mkdir' : ("Make directory\n"
+              "Usage: mkdir <directory_name>"),
+    'cat'   : ("Print contents of file to stdout\n"
+              "Usage: cat <filename>"),
     'history': 'Print command history',
-    'kill': ("kill a process\n"
-            "Usage: kill <pid>"),
-    'df': 'Print disk usage',
+    'kill'  : ("kill a process\n"
+              "Usage: kill <pid>"),
+    'df'    : 'Print disk usage',
     'hostname': 'Print hostname of device',
-    'echo': ("Print a string\n"
-            "Usage: echo <string>"),
-    'sleep': ("Sleep for a number of seconds\n"
-            "Usage: sleep <time in seconds>"),
-    'date': 'Print current date in zsh format',
-    'cp': ("Copy a file from source path to destination path\n"
-            "Usage: cp <source> <destination>"),
-    'mv': ("Move a file from source path to destination path\n"
-            "Usage: mv <source> <destination>"),
-    'find': ("Walk a file heirarchy\n"
-            "Usage: find <start_dir> <to_find>"),
-    'which': ("Locate a program file in the user's path\n"
-            "Usage: which <cmd>"),
-    'run': ("Run a python file\n"
-            "Usage: run <python_file>"),
-    'ip': 'Print your private ip',
-    'chat': 'Chat with IRC',
-    'color': 'Change prompt colour',
-    'help': 'display pysh help'
+    'echo'  : ("Print a string\n"
+              "Usage: echo <string>"),
+    'sleep' : ("Sleep for a number of seconds\n"
+              "Usage: sleep <time in seconds>"),
+    'date'  : 'Print current date in zsh format',
+    'cp'    : ("Copy a file from source path to destination path\n"
+              "Usage: cp <source> <destination>"),
+    'mv'    : ("Move a file from source path to destination path\n"
+              "Usage: mv <source> <destination>"),
+    'find'  : ("Walk a file heirarchy\n"
+              "Usage: find <start_dir> <to_find>"),
+    'which' : ("Locate a program file in the user's path\n"
+              "Usage: which <cmd>"),
+    'run'   : ("Run a python file\n"
+              "Usage: run <python_file>"),
+    'ip'    : 'Print your private ip',
+    'chat'  : 'Chat with IRC',
+    'color' : 'Change prompt colour',
+    'wget'  : ("Download a file from url\n"
+              "Usage: wget <url>"),
+    'help'  : 'display pysh help'
 }
 
 def kedit(path=None):
@@ -202,6 +205,21 @@ def find(start=None, tofind=None, firstcall=True):
             except KeyboardInterrupt:
                 pass
 
+def wget(url=None):
+    if url is None:
+        print(f"{red}Usage: wget <url> {reset}")
+    else:
+        fname = os.path.basename(url)
+        r = requests.get(url, stream=True)
+        with open(fname, 'wb') as f:
+            fprint(f"{green}Downloading file.{reset}")
+            for chunk in r.iter_content(chunk_size=1024):
+                if chunk:
+                    f.write(chunk)
+                    f.flush()
+            clrline()
+            print(f"{green}Done.{reset}")
+
 def which(cmd=None):
     if cmd is None:
         print(f'Usage: which <cmd>')
@@ -232,7 +250,7 @@ def ls(dirname=None):
 
     if ls is not None and len(ls)>0:
         ls_cols = 3
-        good_length = (cols()//ls_cols)-ls_cols
+        good_length = (cols()//ls_cols)
         ls = list(((name[:good_length-2] + '..')\
                 if len(name) > good_length else name) for name in ls)
         max_file_len = max(len(name) for name in ls) + 5
@@ -241,7 +259,7 @@ def ls(dirname=None):
         counter = 0
         ls_cols = 3
         for obj in ls:
-            print(obj.ljust(good_length+1),end="")
+            print(obj.ljust(good_length),end="")
             counter+=1
             if counter%ls_cols==0 or counter == len(ls):
                 print()
@@ -428,7 +446,7 @@ def help(func=None):
     if func is None:
         global available
         # max_comm_len = max(len(func) for func in available) + 5
-        max_comm_len = cols()//4-4
+        max_comm_len = cols()//4
         print(f'{yellow}Available Commands:{reset}')
 
         # I want list in four columns (neat stonk)
