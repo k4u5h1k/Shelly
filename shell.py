@@ -29,6 +29,25 @@ if os.path.exists(histpath):
             histarray.append(line.strip())
 histfile = open(histpath, 'a+')
 
+reset = '\033[0m'
+red = '\033[31m'
+green = '\033[32m'
+yellow = '\033[33m'
+blue = '\033[34m'
+orange = '\033[35m'
+cyan = '\033[36m'
+white = '\033[29m'
+
+# Persistent prompt colours across sessions
+colourfile = os.path.join(script_loc,'.colours')
+if os.path.exists(colourfile):
+    with open(colourfile,'r+') as f:
+       usercolour, dircolour, symbolcolour = f.readline().split()
+else:
+    usercolour = cyan
+    dircolour = green
+    symbolcolour = orange
+
 iswin = sys.platform.startswith('win')
 if iswin:
     import msvcrt
@@ -73,73 +92,68 @@ else:
     # Username is stored in $USER env variable in windows
     USER = 'USER'
 
-reset = '\033[0m'
-red = '\033[31m'
-green = '\033[32m'
-yellow = '\033[33m'
-blue = '\033[34m'
-purple = '\033[35m'
-cyan = '\033[36m'
-white = '\033[29m'
-
 # Show corresponding help message when command is help <function name>
 usage = {
-    'kedit' : ("Our very own text editor\n"
+    'kedit'   : ("Our very own text editor\n"
                 "Usage: kedit <filename> (optional: default='Untitled.txt')"),
-    'cowsay': ("Make a cow say something!\n"
+    'cowsay'  : ("Make a cow say something!\n"
                 "Usage: cowsay 'string' "),
-    'grep'  : ("Search for a string in a file\n"
-            "Usage: grep <filename> <string to search>"),
-    'cd'    : ("Change current working directory\n"
-            "Usage: cd path_to_directory (optional: default='~')"),
-    'pwd'   : 'Print current working directory',
-    'whoami': 'Print current user',
-    'ls'    : 'Print contents of current working directory',
-    'clear' : 'Clear screen',
-    'file'  : ("Identify file metadata\n"
-              "Usage: file <filename>"),
-    'touch' : ("Create empty file\n"
-              "Usage: touch <filename>"),
-    'rm'    : ("Remove a file or directory\n"
-              "Usage: rm <path>"),
-    'mkdir' : ("Make directory\n"
-              "Usage: mkdir <directory_name>"),
-    'cat'   : ("Print contents of file to stdout\n"
-              "Usage: cat <filename>"),
-    'history': 'Print command history',
-    'kill'  : ("kill a process\n"
-              "Usage: kill <pid>"),
-    'df'    : 'Print disk usage',
+    'grep'    : ("Search for a string in a file\n"
+                "Usage: grep <filename> <string to search>"),
+    'cd'      : ("Change current working directory\n"
+                "Usage: cd path_to_directory (optional: default='~')"),
+    'fopen'   : ("Open a file using the browser or a default app\n"
+                "Usage: fopen <file>"),
+    'pwd'     : "Print current working directory",
+    'whoami'  : "Print current user",
+    'ls'      : "Print contents of current working directory",
+    'clear'   : "Clear screen",
+    'file'    : ("Identify file metadata\n"
+                "Usage: file <filename>"),
+    'touch'   : ("Create empty file\n"
+                "Usage: touch <filename>"),
+    'rm'      : ("Remove a file or directory\n"
+                "Usage: rm <path>"),
+    'mkdir'   : ("Make directory\n"
+                "Usage: mkdir <directory_name>"),
+    'cat'     : ("Print contents of file to stdout\n"
+                "Usage: cat <filename>"),
+    'history' : "Print command history",
+    'kill'    : ("kill a process\n"
+                "Usage: kill <pid>"),
+    'df'      : 'Print disk usage',
     'hostname': 'Print hostname of device',
-    'echo'  : ("Print a string\n"
-              "Usage: echo <string>"),
-    'sleep' : ("Sleep for a number of seconds\n"
-              "Usage: sleep <time in seconds>"),
-    'date'  : 'Print current date in zsh format',
-    'cp'    : ("Copy a file from source path to destination path\n"
-              "Usage: cp <source> <destination>"),
-    'mv'    : ("Move a file from source path to destination path\n"
-              "Usage: mv <source> <destination>"),
-    'find'  : ("Walk a file heirarchy\n"
-              "Usage: find <start_dir> <to_find>"),
-    'which' : ("Locate a program file in the user's path\n"
-              "Usage: which <cmd>"),
-    'run'   : ("Run a python file\n"
-              "Usage: run <python_file>"),
-    'ip'    : 'Print your private ip',
-    'chat'  : 'Chat with IRC',
-    'color' : 'Change prompt colour',
-    'wget'  : ("Download a file from url\n"
-              "Usage: wget <url>"),
-    'help'  : 'display pysh help'
+    'echo'    : ("Print a string\n"
+                "Usage: echo <string>"),
+    'sleep'   : ("Sleep for a number of seconds\n"
+                "Usage: sleep <time in seconds>"),
+    'date'    : "Print current date in zsh format",
+    'cp'      : ("Copy a file from source path to destination path\n"
+                "Usage: cp <source> <destination>"),
+    'mv'      : ("Move a file from source path to destination path\n"
+                "Usage: mv <source> <destination>"),
+    'find'    : ("Walk a file heirarchy\n"
+                "Usage: find <start_dir> <to_find>"),
+    'which'   : ("Locate a program file in the user's path\n"
+                "Usage: which <cmd>"),
+    'run'     : ("Run a python file\n"
+                "Usage: run <python_file>"),
+    'ip'      : "Print your private ip",
+    'chat'    : "Chat with IRC",
+    'colour'  : "Change prompt colour",
+    'ping'    : ("Ping a url/ip\n"
+                "Usage: ping <url/ip>"),
+    'wget'    : ("Download a file from url\n"
+                "Usage: wget <url>"),
+    'help'    : "Display shelly help"
 }
 
 def kedit(path=None):
     try:
         from kedit import editFile
     except:
-        print(f'{red}kedit.py was not found in scripts \
-                directory, it will not work{reset}')
+        print((f'{red}kedit.py was not found in scripts'
+               f' directory, it will not work{reset}'))
         return
 
     editFile(path)
@@ -148,13 +162,14 @@ def cowsay(string=None):
     try:
         from cow import cow
     except:
-        print(f'{red}cow.py was not found in scripts \
-                directory, it will not work{reset}')
+        print((f'{red}cow.py was not found in scripts'
+               f' directory, it will not work{reset}'))
         return
 
     if string is None:
         string = 'Give me something to say'
-    cow(string)
+    else:
+        cow(string)
 
 def grep(path=None, tosearch=None):
     if path is None or tosearch is None:
@@ -207,7 +222,7 @@ def find(start=None, tofind=None, firstcall=True):
 
 def wget(url=None):
     if url is None:
-        print(f"{red}Usage: wget <url> {reset}")
+        print("Usage: wget <url>")
     else:
         fname = os.path.basename(url)
         r = requests.get(url, stream=True)
@@ -222,9 +237,19 @@ def wget(url=None):
 
 def which(cmd=None):
     if cmd is None:
-        print(f'Usage: which <cmd>')
+        print('Usage: which <cmd>')
     else:
         print(shutil.which(cmd))
+
+def fopen(filename=None):
+    if filename is None:
+        print('Usage: fopen <path>')
+    else:
+        import webbrowser
+        if os.path.exists(filename):
+            webbrowser.open(f'file://{os.path.abspath(filename)}')
+        else:
+            print(f'{red}Invalid file path{reset}')
 
 def pwd():
     print(os.getcwd())
@@ -270,53 +295,68 @@ def clear():
     print("\x1b\x5b\x48\x1b\x5b\x32\x4a", end="")    
 cls = clear
 
-def file(filename):
+def file(filename=None):
     try:
         from identify import tags_from_path
     except:
-        print(f'{red}identify.py was not found in \
-                scripts directory, it will not work{reset}')
+        print((f'{red}identify.py was not found in scripts'
+               f' directory, it will not work{reset}'))
 
-    if os.path.exists(filename):
-        print(filename+':'+' '.join(sorted(tags_from_path(filename),
-            key=lambda x:len(x))))
+    if filename is None:
+        print("Usage: file <filename>")
     else:
-        print(f"{red}Not a valid file path!{reset}")
+        if os.path.exists(filename):
+            print(filename+':'+' '.join(sorted(tags_from_path(filename),
+                key=lambda x:len(x))))
+        else:
+            print(f"{red}Not a valid file path!{reset}")
 
-def touch(filename):
-    if not os.path.exists(filename):
-        open(filename, 'a').close()
+def touch(filename=None):
+    if filename is None:
+        print("Usage: touch <filename>")
     else:
-        print(f"{red}file already exists{reset}")
+        if not os.path.exists(filename):
+            open(filename, 'a').close()
+        else:
+            print(f"{red}file already exists{reset}")
 
-def rm(path):
-    if os.path.exists(path):
-        if os.path.isfile(path):
-            os.remove(path)
-        elif os.path.isdir(path):
-            choice = input("Delete directory?(y/n) ")
-            if choice=='' or choice.lower().startswith('y'):
-                shutil.rmtree(path)
+def rm(path=None):
+    if path is None:
+        print("Usage: rm <path>")
     else:
-        print(f"{red}Not a valid file path!{reset}")
+        if os.path.exists(path):
+            if os.path.isfile(path):
+                os.remove(path)
+            elif os.path.isdir(path):
+                choice = input("Delete directory?(y/n) ")
+                if choice=='' or choice.lower().startswith('y'):
+                    shutil.rmtree(path)
+        else:
+            print(f"{red}Not a valid file/directory path!{reset}")
 remove = rm
 
-def mkdir(path):
-    if not os.path.isdir(path):
-        os.mkdir(path)
+def mkdir(dirname=None):
+    if dirname is None:
+        print("Usage: mkdir <dirname>")
     else:
-        print(f"{red}Not a valid/free directory path!{reset}")
-
-def cat(filename):
-    if os.path.isfile(filename):
-        with open(filename) as handle:
-            for line in handle:
-                print(line.rstrip())
-    else:
-        if os.path.isdir(filename):
-            print(f"{red}{filename} is a directory not file!{reset}")
+        if not os.path.isdir(dirname):
+            os.mkdir(dirname)
         else:
-            print(f"{red}File does not exist!{reset}")
+            print(f"{red}Not a valid/free directory path!{reset}")
+
+def cat(filename=None):
+    if filename is None:
+        print("Usage: cat <filename>")
+    else:
+        if os.path.isfile(filename):
+            with open(filename) as handle:
+                for line in handle:
+                    print(line.rstrip())
+        else:
+            if os.path.isdir(filename):
+                print(f"{red}{filename} is a directory not file!{reset}")
+            else:
+                print(f"{red}File does not exist!{reset}")
 
 def history():
     histfile.seek(0)
@@ -324,9 +364,12 @@ def history():
     for counter,command in enumerate(lines):
         print(f"{(str(counter+1)+'.').ljust(3)} {command.rstrip()}")
 
-def kill(pid):
-    import signal
-    os.kill(pid, signal.SIGSTOP)
+def kill(pid=None):
+    if pid is None:
+        print("{red}Usage: kill <pid>{reset}")
+    else:
+        import signal
+        os.kill(pid, signal.SIGSTOP)
 
 def df():
     st = os.statvfs("/")
@@ -379,24 +422,36 @@ def run(filename=None,**kwargs):
     else:
         with open(filename, "rb") as source_file:
             code = compile(source_file.read(), filename, "exec")
+
         try:
-            pid = os.fork()
-            if pid:
-                os.wait()
-            else:
-                exec(code, kwargs)
+            exec(code, kwargs)
+        except KeyboardInterrupt:
+            pass
         except Exception as err:
             print(f'{red}{err}{reset}')
-            return
 
 def ip():
     try:
         s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         s.connect(("8.8.8.8", 80))
-        print(green+s.getsockname()[0]+reset)
+        print(f'{green}{s.getsockname()[0]}{reset}')
         s.close()
     except Exception as err:
         print(f'{red}Offline{reset}')
+
+def ping(url=None):
+    if url is None:
+        print(f"{red}Usage: ping <url>{reset}")
+    else:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(1)
+        host = socket.getaddrinfo(url, 80)
+        result = sock.connect_ex(host[-1][4])
+        if result==0:
+            print(f"{green}{url} is up{reset}")
+        else:
+            print(f"{red}{url} is down{reset}")
+        sock.close()
 
 def chat():
     client_path = os.path.join(script_loc,'scripts','irc_client.py')
@@ -413,19 +468,19 @@ def colour():
                 "green" ,
                 "yellow",
                 "blue"  ,
-                "purple",
+                "orange",
                 "cyan"  ,
                 "white" 
                 ]
 
-    toprint = "\n".join(
-            list(f'{globals()[i]}{i}{reset}' for i in available))
+    toprint = "\n".join(list(f'{globals()[i]}{i}{reset}' \
+            for i in available))
 
     print(f'Available colours: \n{toprint}')
     user = input('Username colour: ').lower()
     directory = input('Directory colour: ').lower()
     symbol = input('Prompt symbol colour: ').lower()
-    if user in available and directory in available and symbol in available:
+    if all(x in available for x in [user, directory, symbol]):
         # Another way to saying access colour from 
         # global variable which user input
         usercolour = globals()[user]
@@ -475,6 +530,7 @@ local_locals = list(locals().items()).copy()
 for key, value in local_locals:
     if callable(value) and value.__module__==__name__:
         available.append(key)
+available.remove('readchar')
 
 # Print to same line
 fprint = lambda x: print(x,end='',flush=True)
@@ -482,16 +538,6 @@ fprint = lambda x: print(x,end='',flush=True)
 # Clear the current line
 cols = lambda : shutil.get_terminal_size().columns
 clrline = lambda : fprint('\r'+' '*cols()+'\r')
-
-# Persistent prompt colours across sessions
-colourfile = os.path.join(script_loc,'.colours')
-if os.path.exists(colourfile):
-    with open(colourfile,'r+') as f:
-       usercolour, dircolour, symbolcolour = f.readline().split()
-else:
-    usercolour = cyan
-    dircolour = green
-    symbolcolour = purple
 
 def take_input(PS1):
     backspace = b'\x7f' if not iswin else b'\x08'
@@ -663,13 +709,12 @@ def runShell():
     cwd = os.getcwd()
 
     # Replace home in prompt with '~'
-    if cwd == os.path.expanduser('~'):
+    if cwd==os.path.expanduser('~'):
         dirname = '~'
+    elif cwd=='/':
+        dirname = '/'
     else:
-        if cwd == '/':
-            dirname = '/'
-        else:
-            dirname = os.path.split(cwd)[-1]
+        dirname = os.path.split(cwd)[-1]
 
     user = os.getenv(USER)
     PS1 = f"{usercolour}{user}{reset} {dircolour}{dirname}{reset} {symbolcolour}${reset} "
@@ -690,81 +735,37 @@ def runShell():
     3: Invalid
     '''
 
-    # Now split the user input and run 
-    # it through our parsing routine
+    # Now split the user input and 
     # if first word is valid function
+    # parse into valid function call
     split_com = shlex.split(command)
     if split_com[0] in available:
         command_type = 2
-
-        # Parse through command and add '(', ',', ')' and '"' 
-        # wherever needed to create valid python function call string
-        start_with_quote = lambda word: word.startswith("'")\
-                or word.startswith('"')
-        end_with_quote = lambda word: word.endswith("'") or \
-                word.endswith('"')
-        sawQuote = False
-        for i in range(1,len(split_com)):
-            word = split_com[i]
-
-            if not sawQuote and not \
-                    (start_with_quote(word) or end_with_quote(word)):
-                split_com[i]="'"+split_com[i]+"'"
-                word = split_com[i]
-
-            elif start_with_quote(word):
-                sawQuote=True
-
-            if end_with_quote(word) and i!=len(split_com)-2:
-                split_com[i]+=","
-                sawQuote = False
-            
-        args = ','.join(split_com[1:])
+        args = ','.join(map(lambda x: "'"+x+"'", split_com[1:]))
         command = f'{split_com[0]}({args})'
 
-    else:
-        # Dont print anything here onwards to stdout
-        # to suppress whatever bs exec prints
-        old_stdout = sys.stdout
-        sys.stdout = None 
-
-        try:
-            if exec(command) is None:
-                command_type = 1
-
-        # If error occurs it is invalid so type 3
-        except:
-            command_type = 3
-
-        # Resume printing to stdout
-        sys.stdout = old_stdout
-
-    if command_type==3:
-        print(f"{red}Invalid command {user}!{reset}")
-        return
-    else:
-        try:
-            exec(command,globals(),locals())
-        except Exception as err:
-            command_type = 3
-            print(f'{red}{err}{reset}')
+    try:
+        if exec(command,globals(),locals()) is None:
+            command_type = 1
+    except Exception as err:
+        command_type = 3
+        print(f'{red}{err}{reset}')
 
     # Add command to history if it is not invalid
     if command_type!=3:
         histfile.write(command_copy+'\n')
         histarray.append(command_copy)
 
-
-if __name__ == '__main__':
+def main():
     try:
         while True:
             runShell()
-
-    except (KeyboardInterrupt, ValueError):
+    except KeyboardInterrupt:
         clrline()
-    except Exception as err:
-        clrline()
-        print(f'{red}{err}{reset}')
-        print(yellow+"Error Occured, Exiting."+reset)
+        print(f"{red}Enter exit or quit to exit shell.{reset}")
+        main()
     finally:
         histfile.close()
+
+if __name__ == '__main__':
+    main()

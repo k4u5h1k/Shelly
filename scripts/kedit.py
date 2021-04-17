@@ -8,9 +8,6 @@ from copy import deepcopy
 
 from readchar import readchar
 
-script_loc = os.path.dirname(os.path.realpath(__file__))
-sys.path.insert(0, os.path.join(script_loc))
-
 iswin = sys.platform.startswith('win')
 if iswin:
     # Must run this in windows for colour codes to work
@@ -76,7 +73,7 @@ def editFile(path=None):
     fprint('\n'*(termrows//2-2))
     for i in range(4):
         print(colors[i]+welcome[i].center(columns)+reset)
-    readchar.readchar()
+    readchar()
     # This will show cursor
     fprint('\033[?25h')
 
@@ -107,7 +104,7 @@ def editFile(path=None):
         fprint(f'\x1b[{right[0].decode("utf-8")}'*rightcount)
 
         # Read a character
-        char = readchar.readchar()
+        char = readchar()
 
         # Windows readchar() returns byte and darwin returns string
         # So must have functions to interconvert
@@ -123,10 +120,10 @@ def editFile(path=None):
 
         # If key is escape
         if key_is(b'\x1b'):
-            char = readchar.readchar()
+            char = readchar()
             # if next character is '[' it is probably an arrow key
             if key_is(b'['):
-                char = readchar.readchar()
+                char = readchar()
                 if key_is(up[0]):
                     if curs_row()-1>=0:
                         up[1]+=1

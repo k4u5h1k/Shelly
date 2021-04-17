@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
-import threading
-import random
-import socket
-import string
+import os
 import sys
 import time
+import string
 import shutil
+import socket
+import threading
+
 from readchar import readchar
 
 cols = shutil.get_terminal_size().columns
@@ -81,8 +82,6 @@ def recieve():
 
         except UnicodeDecodeError:
             continue
-        except KeyboardInterrupt:
-            continue
 
 def start_send():
     global justPrinted, msg, recvt
@@ -98,7 +97,7 @@ def start_send():
             return
         clrline()
         fprint(f'You: {msg}')
-        char = readchar.readchar()
+        char = readchar()
         byte_char = lambda: char if type(char)==bytes else char.encode()
         actual_char = lambda: char.decode('utf-8') if type(char)==bytes else char
 
