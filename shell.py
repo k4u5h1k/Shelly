@@ -13,11 +13,12 @@ import requests
 try:
     script_loc = os.path.dirname(os.path.realpath(__file__))
 except:
-    # If run command is used to run this file
-    # __file__ will raise error as not defined
+    # If run command is used to run this script
+    # __file__ will cause error 'name not defined' to be raised
     script_loc = os.getcwd()
 
-# Adding scripts to PYTHONPATH so everything in scripts is directly importable
+# Adding scripts to PYTHONPATH so everything 
+# in scripts is directly importable
 sys.path.insert(0, os.path.join(script_loc,'scripts'))
 
 # Loading history file
@@ -125,6 +126,7 @@ usage = {
     'hostname': 'Print hostname of device',
     'echo'    : ("Print a string\n"
                 "Usage: echo <string>"),
+    'read'    : 'Print how your terminal interprets a key',
     'sleep'   : ("Sleep for a number of seconds\n"
                 "Usage: sleep <time in seconds>"),
     'date'    : "Print current date in zsh format",
@@ -194,31 +196,29 @@ def cd(path=None):
             else:
                 print(f"{red}{path} is not a valid directory!{reset}")
 
-def find(start=None, tofind=None, firstcall=True):
-    global found
-    if start is None or tofind is None:
+def find(start=None, tofind=None):
+    if (start is None or tofind is None) or not os.path.isdir(start):
         print('Usage: find <start> <file to search>')
     else:
-        if firstcall:
-            found = False
-
-        if not found:
+        q = [start]
+        found = False
+        while len(q)!=0 and not found:
             try:
-                if os.path.isdir(start):
-                    for item in os.listdir(start):
-                        if re.match(tofind, item):
-                            found = True
-                            print(os.path.join(start,item))
-                            return
-                        if os.path.isdir(os.path.join(start, item)):
-                            find(os.path.join(start, item),
-                                tofind,
-                                False)
-                else:
-                    print(f"{red}{start} is not a valid directory!{reset}")
+                current = q.pop(0)
+                for item in os.listdir(current):
+                    if re.match(tofind, item):
+                        found = True
+                        print(os.path.join(current,item))
+                        return
+                    if os.path.isdir(os.path.join(current, item)):
+                        q.append(os.path.join(current, item))
 
             except KeyboardInterrupt:
                 pass
+            except Exception as err:
+                print('{red}err{reset}')
+        if not found:
+            print(f'{yellow}Could not find {tofind} within {start}{reset}')
 
 def wget(url=None):
     if url is None:
@@ -285,7 +285,7 @@ def ls(dirname=None):
         ls_cols = 3
         for obj in ls:
             print(obj.ljust(good_length),end="")
-            counter+=1
+            counter += 1
             if counter%ls_cols==0 or counter == len(ls):
                 print()
 dir = ls
@@ -342,7 +342,7 @@ def mkdir(dirname=None):
         if not os.path.isdir(dirname):
             os.mkdir(dirname)
         else:
-            print(f"{red}Not a valid/free directory path!{reset}")
+            print(f"{red}Not a valid/available directory path!{reset}")
 
 def cat(filename=None):
     if filename is None:
@@ -377,15 +377,22 @@ def df():
     total = st.f_blocks * st.f_frsize
     used = (st.f_blocks - st.f_bfree) * st.f_frsize
 
-    print("Total: %d GiB" % (total // (2**30)))
-    print("Used: %d GiB" % (used // (2**30)))
-    print("Free: %d GiB" % (free // (2**30)))
+    print("Total: %d GiB"%(total//(2**30)))
+    print("Used: %d GiB"%(used//(2**30)))
+    print("Free: %d GiB" %(free//(2**30)))
 
 def echo(toprint=None):
     if toprint==None:
         print('Usage: echo <string to print>')
     else:
         print(toprint)
+
+def read():
+    try:
+        while True:
+            print(str(readchar().encode())[2:-1])
+    except KeyboardInterrupt:
+        return
 
 def sleep(secs=None):
     if secs==None:
@@ -407,11 +414,11 @@ def cp(source=None, destination=None):
         print(f'copying file: {source} -> {destination}')
         shutil.copy(source, destination)
 
-def mv(source, destination):
+def mv(source=None, destination=None):
     if source==None or destination==None:
         print('Usage: mv <source> <destination>')
     elif os.path.exists(source):
-        print(f'moving file: {source} -> {destination}')
+        print(f'moving: {source} -> {destination}')
         shutil.move(source, destination)
     else:
         print(f'{red}One or both paths are invalid{reset}')
@@ -508,7 +515,7 @@ def help(func=None):
         counter = 0
         for obj in available:
             print(obj.ljust(max_comm_len),end="")
-            counter+=1
+            counter += 1
             if counter%4==0 or counter==len(available):
                 print()
         print(f'{yellow}+ Any python3 one-liner {reset}')
@@ -577,11 +584,11 @@ def take_input(PS1):
         # valid function colour it green
         if len(command.strip())!=0 and \
                 (command.split()[0] in available or isexit):
-            tempcmd = green+command[:space]+reset+command[space:]
-            toprint = PS1+tempcmd
+            tempcmd = green + command[:space] + reset + command[space:]
+            toprint = PS1 + tempcmd
         # Otherwise just print it as is
         else:
-            toprint = PS1+command
+            toprint = PS1 + command
 
         fprint(toprint)
         prevlen = printlen
@@ -643,7 +650,7 @@ def take_input(PS1):
 
         # If key is backspace remove character in front of cursor
         elif byte_char()==backspace:
-            command = command[:cur_pos()-1]+command[cur_pos():]
+            command = command[:cur_pos()-1] + command[cur_pos():]
 
         # Tab completion
         elif key_is(tab):
@@ -703,7 +710,7 @@ def take_input(PS1):
                     time.sleep(0.7)
 
         elif actual_char() in string.printable:
-            command = command[:cur_pos()]+actual_char()+command[cur_pos():]
+            command = command[:cur_pos()] + actual_char() + command[cur_pos():]
 
 def runShell():
     cwd = os.getcwd()
@@ -723,38 +730,37 @@ def runShell():
     command = take_input(PS1)
     command_copy = command
 
-    # If command is a directory cd to it
-    if os.path.isdir(command):
-        cd(command)
-        return
+    # Possible command types 
+    # Python line
+    # Shell Command
+    # Invalid
 
-    '''
-    Possible command types 
-    1. Python line
-    2: Shell Command
-    3: Invalid
-    '''
-
-    # Now split the user input and 
     # if first word is valid function
-    # parse into valid function call
+    # then type is 2. Split and parse
+    # command into valid function call
     split_com = shlex.split(command)
     if split_com[0] in available:
-        command_type = 2
         args = ','.join(map(lambda x: "'"+x+"'", split_com[1:]))
         command = f'{split_com[0]}({args})'
 
-    try:
-        if exec(command,globals(),locals()) is None:
-            command_type = 1
-    except Exception as err:
-        command_type = 3
-        print(f'{red}{err}{reset}')
+    # If command is a directory cd to it
+    elif os.path.isdir(command):
+        cd(command)
+        return
 
-    # Add command to history if it is not invalid
-    if command_type!=3:
-        histfile.write(command_copy+'\n')
-        histarray.append(command_copy)
+    # Only other valid possibility is
+    # that command is python code. So
+    # execute it now and if error occurs
+    # mark as invalid
+    try:
+        exec(command,globals(),globals())
+    except Exception as err:
+        print(f'{red}{err}{reset}')
+        return
+
+    # Add command to history
+    histfile.write(command_copy+'\n')
+    histarray.append(command_copy)
 
 def main():
     try:
@@ -763,6 +769,9 @@ def main():
     except KeyboardInterrupt:
         clrline()
         print(f"{red}Enter exit or quit to exit shell.{reset}")
+        main()
+    except Exception as err:
+        print(f"{red}Error: {err}{reset}")
         main()
     finally:
         histfile.close()

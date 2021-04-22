@@ -35,7 +35,7 @@ def editFile(path=None):
     right = [b'C',0]
 
     # Windows uses a different hex form backspace (use xxd -psg to confirm)
-    backspace = b'\x7f' if not iswin else b'\x08'
+    backspace = b'\x08' if iswin else b'\x7f'
 
     # If our file exists open it up and read it into towrite
     towrite = ''
@@ -89,6 +89,12 @@ def editFile(path=None):
         # joined in last line
         lines = towrite.split('\n')
 
+        # Add newline at the end of lines greater than
+        # term width. Without this printing gets messed up
+        for rownum,line in enumerate(lines):
+            if len(line)>columns:
+                lines[rownum:rownum+1] = line[:columns], line[columns:]
+
         # Might need to scroll screen if file is long
         # we will calculate that later
         fprint('\n'.join(lines[scroll:termrows+scroll]))
@@ -120,6 +126,7 @@ def editFile(path=None):
 
         # If key is escape
         if key_is(b'\x1b'):
+
             char = readchar()
             # if next character is '[' it is probably an arrow key
             if key_is(b'['):
@@ -132,7 +139,7 @@ def editFile(path=None):
                             left[1] = 0;
                 if key_is(down[0]):
                     if curs_row()+1<=linecount-1:
-                        down[1]+=1
+                        down[1]+=len(lines[curs_row()])//columns+1
                         if curs_col()>len(lines[curs_row()])-1:
                             right[1] = len(lines[curs_row()])
                             left[1] = 0
@@ -173,8 +180,19 @@ def editFile(path=None):
                 else:
                     right[1]+=len(char)
 
-            # If key is backspace remove the character before the cursor
+                # If cursor is at the last column when
+                # character is entered move it to next line
+                if curs_col()==columns+1:
+                    down[1] += 1
+                    left[1] = 0
+                    right[1] = 1
+
+            # If key is backspace remove the 
+            # character before the cursor
             elif key_is(backspace):
+
+                # If cursor is at the first column when
+                # character is backspaced move to previous line
                 if curs_col()==0:
                     if not curs_row()==0:
                         right[1] = len(lines[curs_row()-1])
@@ -197,8 +215,6 @@ def editFile(path=None):
                 scroll = check_scroll
 
     towrite = towrite.rstrip('\n')+'\n'
-
-
     clr()
     # Save and exit if write flag set if not exit
     if write:
