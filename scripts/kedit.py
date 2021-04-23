@@ -19,6 +19,7 @@ def editFile(path=None):
     if path is None:
         path = 'Untitled.txt'
 
+    # Colours
     reset = '\033[0m'
     red = '\033[31m'
     green = '\033[32m'
@@ -27,28 +28,36 @@ def editFile(path=None):
     purple = '\033[35m'
     cyan = '\033[36m'
 
-    # Key codes - up is \1xb[A and only the last character is unique so just store that
+    # Key codes - UP is \1xb[A and only 
+    # the last character of each code 
+    # is unique so just store that.
     # Index 1 is cursor's direction count
     up = [b'A',0]
     down = [b'B',0]
     left = [b'D',0]
     right = [b'C',0]
 
-    # Windows uses a different hex form backspace (use xxd -psg to confirm)
+    # Windows uses a different hex form backspace 
+    # (use xxd -psg in cmd to verify)
     backspace = b'\x08' if iswin else b'\x7f'
 
-    # If our file exists open it up and read it into towrite
-    towrite = ''
-    if os.path.isfile(path):
-        with open(path,'r+') as f:
-            towrite += f.read().rstrip()
-    scroll = 0
-
     # Rows and Columns in our terminal window
-    columns = shutil.get_terminal_size().columns
-    termrows = shutil.get_terminal_size().lines-1
+    cols = lambda: shutil.get_terminal_size().columns
+    rows = lambda: shutil.get_terminal_size().lines-1
 
     clear_hex = "\x1b\x5b\x48\x1b\x5b\x32\x4a"
+
+    # If our file exists open it up and read it into towrite
+    if os.path.isfile(path):
+        with open(path,'r+') as f:
+            towrite = f.read().rstrip()
+        lines = towrite.split('\n')
+        for rownum,line in enumerate(lines):
+            if len(line)>cols():
+                lines[rownum:rownum+1] = line[:cols()], line[cols():]
+        towrite = '\n'.join(lines)
+    else:
+        towrite = ''
 
     # Print without newline
     fprint = lambda x: print(x,end="",flush=True)
@@ -57,8 +66,8 @@ def editFile(path=None):
     clr = lambda: fprint(clear_hex)
 
     # Print banner
-    padding = ' '*((columns-8)//2) if columns>8 else ''
-    print_banner = lambda: print(clear_hex+padding+"\x1b[30;31m"+'KEDIT V1'+"\x1b[0m"+padding)
+    padding = lambda: ' '*((cols()-8)//2) if cols()>8 else ''
+    print_banner = lambda: print(clear_hex+padding()+"\x1b[30;31m"+'KEDIT V1'+"\x1b[0m"+padding())
 
     # Start print_banner
     welcome = [f'Editing {path}',
@@ -70,9 +79,9 @@ def editFile(path=None):
 
     # This will hide the cursor
     fprint('\033[?25l')
-    fprint('\n'*(termrows//2-2))
+    fprint('\n'*(rows()//2-2))
     for i in range(4):
-        print(colors[i]+welcome[i].center(columns)+reset)
+        print(colors[i]+welcome[i].center(cols())+reset)
     readchar()
     # This will show cursor
     fprint('\033[?25h')
@@ -83,21 +92,31 @@ def editFile(path=None):
 
         # print((f'up:{up[1]} down:{down[1]} '
         #        f'left:{left[1]} right:{right[1]} '
-        #        f'rows:{termrows-1}  scroll:{scroll}/{(down[1]-up[1])-(termrows-1)}'))
+        #        f'rows:{rows()-1}  scroll:{scroll}/{(down[1]-up[1])-(rows()-1)}'))
 
         # All editing is done within a split array
-        # joined in last line
+        # joined in last line.
         lines = towrite.split('\n')
 
-        # Add newline at the end of lines greater than
-        # term width. Without this printing gets messed up
-        for rownum,line in enumerate(lines):
-            if len(line)>columns:
-                lines[rownum:rownum+1] = line[:columns], line[columns:]
+        # Split lines greater than term width.
+        # This gets removed before writing.
+        # Without this printing gets messed up.
+        rownum = 0
+        while rownum<len(lines):
+            if len(lines[rownum])>cols():
+                next_row_prefix = lines[rownum][cols():]
+                lines[rownum] = lines[rownum][:cols()]
+                try:
+                    lines[rownum+1] = next_row_prefix + lines[rownum+1]
+                except IndexError:
+                    lines.append(next_row_prefix)
+            rownum+=1
 
         # Might need to scroll screen if file is long
-        # we will calculate that later
-        fprint('\n'.join(lines[scroll:termrows+scroll]))
+        scroll = max(0, (down[1]-up[1])-(rows()-1))
+
+        # Print out file
+        fprint('\n'.join(lines[scroll:rows()+scroll]))
 
         # Take cursor to top left of screen
         fprint('\x1b[2;1H')
@@ -139,7 +158,7 @@ def editFile(path=None):
                             left[1] = 0;
                 if key_is(down[0]):
                     if curs_row()+1<=linecount-1:
-                        down[1]+=len(lines[curs_row()])//columns+1
+                        down[1]+=1
                         if curs_col()>len(lines[curs_row()])-1:
                             right[1] = len(lines[curs_row()])
                             left[1] = 0
@@ -171,8 +190,9 @@ def editFile(path=None):
             if actual_char() in string.printable:
                 if char=='\t':
                     char = ' '*4
-                toedit = toedit[:curs_col()]+actual_char()+toedit[curs_col():]
+                toedit = toedit[:curs_col()] + actual_char() + toedit[curs_col():]
                 lines[curs_row()] = toedit
+
                 if actual_char()=='\n':
                     left[1] = 0
                     right[1] = 0
@@ -182,7 +202,7 @@ def editFile(path=None):
 
                 # If cursor is at the last column when
                 # character is entered move it to next line
-                if curs_col()==columns+1:
+                if curs_col()==cols()+1:
                     down[1] += 1
                     left[1] = 0
                     right[1] = 1
@@ -202,19 +222,28 @@ def editFile(path=None):
                         up[1] += 1
                 else:
                     toedit = toedit[:curs_col()-1]+toedit[curs_col():]
+                    # if curs_row()!=len(lines)-1 and len(toedit)==cols()-1 \
+                    #         and len(lines[curs_row()+1].strip())!=0:
+                    #     lines[curs_row()] = toedit + lines[curs_row()+1][0]
+                    #     lines[curs_row()+1] = lines[curs_row()+1][1:]
+                    # else:
                     lines[curs_row()] = toedit
                     left[1]+=1
 
             towrite = '\n'.join(lines)
 
-        # If our total lines is greater than terminal length 
-        # we could need to scroll down if cursor is on the last line
-        if linecount>termrows:
-            check_scroll = (down[1]-up[1])-(termrows-1)
-            if check_scroll>=0:
-                scroll = check_scroll
 
-    towrite = towrite.rstrip('\n')+'\n'
+    temp = deepcopy(towrite)
+    towrite = ''
+    for line in temp.split('\n'):
+        # If a line is longer than termwidth
+        # next line is its continuation so 
+        # dont add newline in between
+        if len(line)>=cols():
+            towrite+=line
+        else:
+            towrite+=line+'\n'
+
     clr()
     # Save and exit if write flag set if not exit
     if write:
@@ -223,7 +252,6 @@ def editFile(path=None):
             f.write(towrite)
     else:
         print(f"{red}Exiting without saving {path}{reset}")
-        exit
 
 if __name__=="__main__":
     path = sys.argv[1] if len(sys.argv)>1 else None

@@ -202,23 +202,23 @@ def find(start=None, tofind=None):
     else:
         q = [start]
         found = False
-        while len(q)!=0 and not found:
-            try:
-                current = q.pop(0)
-                for item in os.listdir(current):
-                    if re.match(tofind, item):
-                        found = True
-                        print(os.path.join(current,item))
-                        return
-                    if os.path.isdir(os.path.join(current, item)):
-                        q.append(os.path.join(current, item))
-
-            except KeyboardInterrupt:
-                pass
-            except Exception as err:
-                print('{red}err{reset}')
-        if not found:
-            print(f'{yellow}Could not find {tofind} within {start}{reset}')
+        try:
+            while len(q)!=0:
+                try:
+                    current = q.pop(0)
+                    for item in os.listdir(current):
+                        if re.match(tofind, item):
+                            found = True
+                            print(os.path.join(current,item))
+                        if os.path.isdir(os.path.join(current, item)):
+                            q.append(os.path.join(current, item))
+                except Exception as err:
+                    print('{red}err{reset}')
+        except KeyboardInterrupt:
+            return
+        finally:
+            if not found:
+                print(f'{yellow}Could not find {tofind} within {start}{reset}')
 
 def wget(url=None):
     if url is None:
@@ -227,7 +227,7 @@ def wget(url=None):
         fname = os.path.basename(url)
         r = requests.get(url, stream=True)
         with open(fname, 'wb') as f:
-            fprint(f"{green}Downloading file.{reset}")
+            fprint(f"{green}Downloading file{reset}")
             for chunk in r.iter_content(chunk_size=1024):
                 if chunk:
                     f.write(chunk)
@@ -258,36 +258,35 @@ def whoami():
     print(os.getenv(USER))
 
 def ls(dirname=None):
-    ls = None
-
     if dirname is None:
-        ls = os.listdir(os.curdir)
+        dirname = os.curdir
     else:
-        if '~' in dirname:
-            dirname = dirname.replace('~', os.path.expanduser('~'))
+        if dirname.startswith('~'):
+            dirname = os.path.expanduser(dirname)
 
-        if os.path.isdir(dirname):
-            ls = os.listdir(dirname)
         elif os.path.isfile(dirname):
             print(f"{red}That is a file not directory {os.getenv(USER)}!{reset}")
-        else:
+            return
+
+        elif not os.path.isdir(dirname):
             print(f"{red}{dirname} is not a valid directory!{reset}")
+            return
 
-    if ls is not None and len(ls)>0:
-        ls_cols = 3
-        good_length = (cols()//ls_cols)
-        ls = list(((name[:good_length-2] + '..')\
-                if len(name) > good_length else name) for name in ls)
-        max_file_len = max(len(name) for name in ls) + 5
+    ls = os.listdir(dirname)
+    ls_cols = 3
+    good_length = (cols()//ls_cols)
+    ls = list(((name[:good_length-2] + '..')\
+            if len(name) > good_length else name) for name in ls)
+    max_file_len = max(len(name) for name in ls) + 5
 
-        # I want list in three columns (neat stonk)
-        counter = 0
-        ls_cols = 3
-        for obj in ls:
-            print(obj.ljust(good_length),end="")
-            counter += 1
-            if counter%ls_cols==0 or counter == len(ls):
-                print()
+    # I want list in three columns (neat stonk)
+    counter = 0
+    ls_cols = 3
+    for obj in ls:
+        print(obj.ljust(good_length),end="")
+        counter += 1
+        if counter%ls_cols==0 or counter == len(ls):
+            print()
 dir = ls
 
 def clear():
@@ -450,18 +449,23 @@ def ping(url=None):
     if url is None:
         print(f"{red}Usage: ping <url>{reset}")
     else:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(1)
-        host = socket.getaddrinfo(url, 80)
-        result = sock.connect_ex(host[-1][4])
-        if result==0:
-            print(f"{green}{url} is up{reset}")
-        else:
-            print(f"{red}{url} is down{reset}")
-        sock.close()
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(1)
+            host = socket.getaddrinfo(url, 80)
+            result = sock.connect_ex(host[-1][4])
+            if result==0:
+                print(f"{green}{url} is up{reset}")
+        except Exception as err:
+            if '[Errno 8]' in str(err):
+                print(f"{red}{url} is down{reset}")
+            else:
+                print(f"{red}{err}{reset}")
+        finally:
+            sock.close()
 
 def chat():
-    client_path = os.path.join(script_loc,'scripts','irc_client.py')
+    client_path = os.path.join(script_loc, 'scripts', 'irc_client.py')
     if os.path.exists(client_path):
         run(client_path)
     else:
@@ -540,7 +544,7 @@ for key, value in local_locals:
 available.remove('readchar')
 
 # Print to same line
-fprint = lambda x: print(x,end='',flush=True)
+fprint = lambda x: print(x,end='', flush=True)
 
 # Clear the current line
 cols = lambda : shutil.get_terminal_size().columns
@@ -565,7 +569,10 @@ def take_input(PS1):
     # We take input while True and stop when newline is
     # entered
     while True:
-        printlen = len(command+re.sub(r'\x1b\[.+?m','',PS1))
+        # Actual length of PS1+command to be printed after
+        # removing colour codes
+        printlen = len(command+re.sub(r'\x1b\[.+?m', '', PS1))
+
         # If command is wider than terminal width you must move up
         # a little before printing
         for _ in range(prevlen//(cols()+1)):
@@ -654,6 +661,7 @@ def take_input(PS1):
 
         # Tab completion
         elif key_is(tab):
+            command = command.replace('~',os.path.expanduser('~'))
             command_split = shlex.split(command)
             if len(command_split)==0:
                 continue
@@ -748,12 +756,13 @@ def runShell():
         cd(command)
         return
 
-    # Only other valid possibility is
-    # that command is python code. So
-    # execute it now and if error occurs
-    # mark as invalid
+    # At this point either command is
+    # a parsed shell command or Python
+    # or invalid. 
+    # So we can execute it now and if 
+    # error occurs consider it invalid
     try:
-        exec(command,globals(),globals())
+        exec(command, globals(), globals())
     except Exception as err:
         print(f'{red}{err}{reset}')
         return
