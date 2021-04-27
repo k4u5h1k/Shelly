@@ -103,8 +103,10 @@ usage = {
                 "Usage: grep <filename> <string to search>"),
     'cd'      : ("Change current working directory\n"
                 "Usage: cd path_to_directory (optional: default='~')"),
-    'fopen'   : ("Open a file using the browser or a default app\n"
-                "Usage: fopen <file>"),
+    'kopen'   : ("Open a file using the browser or a default app\n"
+                "Usage: kopen <file>"),
+    'play'    : ("Play a sound file\n"
+                "Usage: play <file>"),
     'pwd'     : "Print current working directory",
     'whoami'  : "Print current user",
     'ls'      : "Print contents of current working directory",
@@ -113,6 +115,8 @@ usage = {
                 "Usage: file <filename>"),
     'touch'   : ("Create empty file\n"
                 "Usage: touch <filename>"),
+    'hash'    : ("Generate md5 hash of a file\n"
+                "Usage: hash <filename>"),
     'rm'      : ("Remove a file or directory\n"
                 "Usage: rm <path>"),
     'mkdir'   : ("Make directory\n"
@@ -138,8 +142,10 @@ usage = {
                 "Usage: find <start_dir> <to_find>"),
     'which'   : ("Locate a program file in the user's path\n"
                 "Usage: which <cmd>"),
-    'run'     : ("Run a python file\n"
-                "Usage: run <python_file>"),
+    'runpy'   : ("Run a python file\n"
+                "Usage: runpy <python_file>"),
+    'ex'      : ("Execute a shell binary/command\n"
+                "Usage: ex <binary>"),
     'ip'      : "Print your private ip",
     'chat'    : "Chat with IRC",
     'colour'  : "Change prompt colour",
@@ -198,7 +204,7 @@ def cd(path=None):
 
 def find(start=None, tofind=None):
     if (start is None or tofind is None) or not os.path.isdir(start):
-        print('Usage: find <start> <file to search>')
+        print('Usage: find <root directory> <file to search>')
     else:
         q = [start]
         found = False
@@ -241,7 +247,7 @@ def which(cmd=None):
     else:
         print(shutil.which(cmd))
 
-def fopen(filename=None):
+def kopen(filename=None):
     if filename is None:
         print('Usage: fopen <path>')
     else:
@@ -250,6 +256,16 @@ def fopen(filename=None):
             webbrowser.open(f'file://{os.path.abspath(filename)}')
         else:
             print(f'{red}Invalid file path{reset}')
+
+# def play(filename=None):
+#     if filename is None:
+#         print('Usage: play <path>')
+#     else:
+#         from playsound import playsound
+#         if os.path.isfile(filename):
+#             playsound(filename)
+#         else:
+#             print(f"{red}Not a valid file{reset}")
 
 def pwd():
     print(os.getcwd())
@@ -280,11 +296,8 @@ def ls(dirname=None):
     max_file_len = max(len(name) for name in ls) + 5
 
     # I want list in three columns (neat stonk)
-    counter = 0
-    ls_cols = 3
-    for obj in ls:
+    for counter, obj in enumerate(ls, 1):
         print(obj.ljust(good_length),end="")
-        counter += 1
         if counter%ls_cols==0 or counter == len(ls):
             print()
 dir = ls
@@ -309,6 +322,27 @@ def file(filename=None):
                 key=lambda x:len(x))))
         else:
             print(f"{red}Not a valid file path!{reset}")
+
+def hash(filename=None):
+    if filename is None:
+        print("Usage: hash <filename>")
+    else:
+        if os.path.isfile(filename):
+            import hashlib
+            h = hashlib.md5()
+
+            # open file for reading in binary mode
+            with open(filename,'rb') as file:
+               # loop till the end of the file
+               chunk = 0
+               while chunk != b'':
+                   # read only 1024 bytes at a time
+                   chunk = file.read(1024)
+                   h.update(chunk)
+
+            print(h.hexdigest())
+        else:
+            print(f"{red}{filename} is not a valid file path!{reset}")
 
 def touch(filename=None):
     if filename is None:
@@ -360,7 +394,7 @@ def cat(filename=None):
 def history():
     histfile.seek(0)
     lines = histfile.readlines()
-    for counter,command in enumerate(lines):
+    for counter, command in enumerate(lines):
         print(f"{(str(counter+1)+'.').ljust(3)} {command.rstrip()}")
 
 def kill(pid=None):
@@ -422,9 +456,9 @@ def mv(source=None, destination=None):
     else:
         print(f'{red}One or both paths are invalid{reset}')
 
-def run(filename=None,**kwargs):
+def runpy(filename=None,**kwargs):
     if filename==None:
-        print('Usage: run <filename>')
+        print('Usage: runpy <filename>')
     else:
         with open(filename, "rb") as source_file:
             code = compile(source_file.read(), filename, "exec")
@@ -435,6 +469,27 @@ def run(filename=None,**kwargs):
             pass
         except Exception as err:
             print(f'{red}{err}{reset}')
+
+def ex(command=None, *args):
+    if command==None:
+        print('Usage: ex <binary to execute>')
+    else:
+        import subprocess
+        if os.path.isfile(command):
+            os.chmod(command, 0o777)
+            args = command
+
+        else:
+            args = [command] + list(args)
+
+            for char in ['|', ';', '&&', '||', '=']:
+                if char in ''.join(args):
+                    print(f'{red}{char} not allowed.{reset}')
+                    print(f'{red}cannot interpret special chars.{reset}')
+                    return
+
+        popen = subprocess.Popen(args)
+        popen.wait()
 
 def ip():
     try:
@@ -467,10 +522,11 @@ def ping(url=None):
 def chat():
     client_path = os.path.join(script_loc, 'scripts', 'irc_client.py')
     if os.path.exists(client_path):
-        run(client_path)
+        runpy(client_path)
     else:
         print("{red} Please place irc_client.py is \
                 scripts directory to access chat {reset}")
+
 
 def colour():
     global usercolour, dircolour, symbolcolour
@@ -512,15 +568,14 @@ def help(func=None):
     if func is None:
         global available
         # max_comm_len = max(len(func) for func in available) + 5
-        max_comm_len = cols()//4
+        help_cols = 4
+        max_comm_len = cols()//help_cols
         print(f'{yellow}Available Commands:{reset}')
 
         # I want list in four columns (neat stonk)
-        counter = 0
-        for obj in available:
+        for counter, obj in enumerate(available, 1):
             print(obj.ljust(max_comm_len),end="")
-            counter += 1
-            if counter%4==0 or counter==len(available):
+            if counter%help_cols==0 or counter==len(available):
                 print()
         print(f'{yellow}+ Any python3 one-liner {reset}')
         print(f'{yellow}Use help <command> for help on specific commands{reset}')
@@ -541,7 +596,9 @@ local_locals = list(locals().items()).copy()
 for key, value in local_locals:
     if callable(value) and value.__module__==__name__:
         available.append(key)
-available.remove('readchar')
+
+if 'readchar' in available:
+    available.remove('readchar')
 
 # Print to same line
 fprint = lambda x: print(x,end='', flush=True)
@@ -754,6 +811,10 @@ def runShell():
     # If command is a directory cd to it
     elif os.path.isdir(command):
         cd(command)
+        return
+    # If command is file try to execute it
+    elif os.path.isfile(command):
+        ex(command)
         return
 
     # At this point either command is

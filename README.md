@@ -1,6 +1,16 @@
 # Shelly
 A no external dependancy, modular, single script, bash-like python REPL with realtime IRC chat and custom text editor `kedit`.
 
+# Features
+- All basic shell commands.
+- Python code interpretation.
+- Coloured prompt and error messages.
+- Tab completion.
+- Command specific help messages
+- no external dependancies (custom implementations python all the way).
+- `shell.py` can be used alone! Meaning user may `rm -rf scripts`   
+  if they do not desire chat and text editor functionality.
+
 # Usage 
 clone this repo and run `python3 shell.py`.
 
@@ -15,20 +25,6 @@ clone this repo and run `python3 shell.py`.
 ## Editor
 ![Screenshot 2021-03-14 at 12 28 07 PM](https://user-images.githubusercontent.com/59250093/111060136-bd553f80-84c0-11eb-902f-5f4986d4f018.png)
 ![Screenshot 2021-03-14 at 12 28 27 PM](https://user-images.githubusercontent.com/59250093/111060146-c9410180-84c0-11eb-9fe3-8b10aeb4da98.png)
-
-
-
-# Features
-- All basic shell commands.
-- Python code interpretation.
-- Coloured prompt and error messages.
-- Tab completion.
-- Custom text editor - kedit.
-- IRC chat.
-- Command specific help messages
-- no external dependancies (handwritten python all the way).
-- `shell.py` can be used alone! Meaning user may `rm -rf scripts`   
-  if they do not desire chat and text editor functionality.
 
 # TODO
 - Pipe support.
