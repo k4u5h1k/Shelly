@@ -17,10 +17,10 @@ clone this repo and run `python3 shell.py`.
 # Screenshots  
 
 ## Shell
-![Screenshot 2021-03-14 at 12 19 55 PM](https://user-images.githubusercontent.com/59250093/111059975-99452e80-84bf-11eb-9167-5259123c8a58.png)
+![Screenshot 2021-04-23 at 11 49 16 PM](https://user-images.githubusercontent.com/59250093/116916069-771f8f80-ac6a-11eb-99db-32e94ee4c570.png)
 
 ## Chat
-![Screenshot 2021-03-14 at 12 25 16 PM](https://user-images.githubusercontent.com/59250093/111060071-59327b80-84c0-11eb-8ee7-e70119377da6.png)
+![Screenshot 2021-04-17 at 12 40 31 PM](https://user-images.githubusercontent.com/59250093/116916043-6cfd9100-ac6a-11eb-97ca-0a358c98f602.png)
 
 ## Editor
 ![Screenshot 2021-03-14 at 12 28 07 PM](https://user-images.githubusercontent.com/59250093/111060136-bd553f80-84c0-11eb-902f-5f4986d4f018.png)
