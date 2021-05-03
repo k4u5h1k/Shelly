@@ -2,12 +2,12 @@
 A no external dependancy, modular, single script, bash-like python REPL with realtime IRC chat and custom text editor `kedit`.
 
 # Features
-- All basic shell commands.
-- Python code interpretation.
-- Coloured prompt and error messages.
-- Tab completion.
+- All basic shell commands
+- Python code interpretation
+- Coloured prompt and error messages
+- Tab completion
 - Command specific help messages
-- no external dependancies (custom implementations python all the way).
+- no external dependancies (custom implementations all the way)
 - `shell.py` can be used alone! Meaning user may `rm -rf scripts`   
   if they do not desire chat and text editor functionality.
 
