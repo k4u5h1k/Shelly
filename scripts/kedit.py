@@ -90,6 +90,7 @@ def editFile(path=None):
         # print title print_banner
         print_banner()
 
+        # Debugging print
         # print((f'up:{up[1]} down:{down[1]} '
         #        f'left:{left[1]} right:{right[1]} '
         #        f'rows:{rows()-1}  scroll:{scroll}/{(down[1]-up[1])-(rows()-1)}'))
@@ -147,7 +148,8 @@ def editFile(path=None):
         if key_is(b'\x1b'):
 
             char = readchar()
-            # if next character is '[' it is probably an arrow key
+            # if next character is '[' 
+            # it is probably an arrow key
             if key_is(b'['):
                 char = readchar()
                 if key_is(up[0]):

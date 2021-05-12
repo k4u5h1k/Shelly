@@ -28,16 +28,16 @@ if os.path.exists(histpath):
     with open(histpath,'r+') as f:
         for line in f:
             histarray.append(line.strip())
-histfile = open(histpath, 'a+')
+histfile = open(histpath, 'w+')
 
-reset = '\033[0m'
-red = '\033[31m'
-green = '\033[32m'
+reset  = '\033[0m'
+red    = '\033[31m'
+green  = '\033[32m'
 yellow = '\033[33m'
-blue = '\033[34m'
+blue   = '\033[34m'
 orange = '\033[35m'
-cyan = '\033[36m'
-white = '\033[29m'
+cyan   = '\033[36m'
+white  = '\033[29m'
 
 # Persistent prompt colours across sessions
 colourfile = os.path.join(script_loc,'.colours')
@@ -313,6 +313,7 @@ def file(filename=None):
     except:
         print((f'{red}identify.py was not found in scripts'
                f' directory, it will not work{reset}'))
+        return
 
     if filename is None:
         print("Usage: file <filename>")
@@ -392,9 +393,7 @@ def cat(filename=None):
                 print(f"{red}File does not exist!{reset}")
 
 def history():
-    histfile.seek(0)
-    lines = histfile.readlines()
-    for counter, command in enumerate(lines):
+    for counter, command in enumerate(histarray):
         print(f"{(str(counter+1)+'.').ljust(3)} {command.rstrip()}")
 
 def kill(pid=None):
@@ -688,11 +687,11 @@ def take_input(PS1):
                 # If key is up or down we scroll through
                 # history
                 if key_is(up):
-                    if histcount>0:
+                    if histcount > 0:
                         histcount -= 1
                         command = histarray[histcount]
                 elif key_is(down):
-                    if histcount<len(histarray)-1:
+                    if histcount < len(histarray)-1:
                         histcount += 1
                         command = histarray[histcount]
                     else:
@@ -706,10 +705,10 @@ def take_input(PS1):
                 # If key is left or right we take the 
                 # cursor left or right
                 if key_is(left[0]):
-                    if cur_pos()>-1:
+                    if cur_pos() > -1:
                         left[1] += 1
                 if key_is(right[0]):
-                    if cur_pos()<len(command):
+                    if cur_pos() < len(command):
                         right[1] += 1
 
         # If key is backspace remove character in front of cursor
@@ -736,7 +735,7 @@ def take_input(PS1):
                 if len(possible_cmd)==1:
                     command = possible_cmd[0]
 
-                if len(possible_cmd)>1:
+                if len(possible_cmd) > 1:
                     toprint = f'{red}Multiple possible commands{reset}'
                     clrline()
                     fprint(PS1+toprint)
@@ -765,7 +764,7 @@ def take_input(PS1):
 
                 # If multiple completion possibilities just tell the user
                 else:
-                    if len(possible)>0:
+                    if len(possible) > 0:
                         toprint = f'{red}Multiple possibilites{reset}'
                     else:
                         toprint = f'{red}No such file/directory{reset}'
@@ -778,6 +777,8 @@ def take_input(PS1):
             command = command[:cur_pos()] + actual_char() + command[cur_pos():]
 
 def runShell():
+    global histarray
+
     cwd = os.getcwd()
 
     # Replace home in prompt with '~'
@@ -793,7 +794,10 @@ def runShell():
 
     # Take input command and add it to history
     command = take_input(PS1)
-    command_copy = command
+    command = command.replace('~', os.path.expanduser('~'))
+
+    # Add command to history
+    histarray.append(command)
 
     # Possible command types 
     # Python line
@@ -828,10 +832,6 @@ def runShell():
         print(f'{red}{err}{reset}')
         return
 
-    # Add command to history
-    histfile.write(command_copy+'\n')
-    histarray.append(command_copy)
-
 def main():
     try:
         while True:
@@ -844,6 +844,7 @@ def main():
         print(f"{red}Error: {err}{reset}")
         main()
     finally:
+        histfile.write('\n'.join(histarray)+'\n')
         histfile.close()
 
 if __name__ == '__main__':
