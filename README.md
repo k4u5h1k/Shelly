@@ -41,4 +41,4 @@ To add your own commands simply define them as a function above the `DEFINE YOUR
 # CREDITS
 - scripts/cow.py customized from https://github.com/VaasuDevanS/cowsay-python.
 - readchar from https://github.com/magmax/python-readchar.
-- .
+
