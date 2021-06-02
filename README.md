@@ -33,7 +33,6 @@ clone this repo and run `python3 shell.py`.
 - chmod support. 
 - Autojump support. 
 - remote command execution (with consent) via IRC.  
-- add support for running external binaries. 
 
 # DEVELOPMENT
 To add your own commands simply define them as a function above the `DEFINE YOUR FUNCTION ABOVE THIS LINE` line.
