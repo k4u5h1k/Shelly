@@ -101,6 +101,8 @@ usage = {
                 "Usage: cowsay 'string' "),
     'grep'    : ("Search for a string in a file\n"
                 "Usage: grep <filename> <string to search>"),
+    'wc'      : (" Used to count the number of characters, words in a file\n"
+                 "Usage: wc <filename>"),
     'cd'      : ("Change current working directory\n"
                 "Usage: cd path_to_directory (optional: default='~')"),
     'kopen'   : ("Open a file using the browser or a default app\n"
@@ -189,7 +191,20 @@ def grep(path=None, tosearch=None):
                     print(f'{number}: {line.strip()}')
     else:
         print(f"{red}{path} is not a valid file!{reset}")
-
+        
+def wc(path=None):
+    count=0
+    if path is None:
+        print('Usage: wc <filename>')
+    if os.path.isfile(path):
+        with open(path) as handle:
+            for line in handle:
+                words=line.split(" ")
+                count=count+len(words)
+            print("Number of words present in given file: "+ str(count))
+    else:
+        print(f"{red}{path} is not a valid file!{reset}")
+        
 def cd(path=None):
     if path is None:
         cd(os.path.expanduser('~'))
